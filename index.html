@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>客詢紀錄與檔期管理系統｜Beutii</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyCiwRvx34o5UnbWux96wAsfGvLOhQa9LZg",
+    authDomain: "storesync-system.firebaseapp.com",
+    projectId: "storesync-system",
+    storageBucket: "storesync-system.firebasestorage.app",
+    messagingSenderId: "404006521402",
+    appId: "1:404006521402:web:34938fbcbfa179805d0303",
+    measurementId: "G-KC5WB4B3JP"
+  };
+
+  var app = initializeApp(firebaseConfig);
+  var db = getFirestore(app);
+  var stateDocRef = doc(db, "beutii_inquiry_system", "state");
+
+  window.FB = {
+    subscribe: function(onData, onError){
+      return onSnapshot(stateDocRef, function(snap){
+        onData(snap.exists() ? snap.data() : null);
+      }, function(err){
+        console.error("Firestore 連線錯誤", err);
+        if(onError) onError(err);
+      });
+    },
+    save: function(data){
+      return setDoc(stateDocRef, JSON.parse(JSON.stringify(data)));
+    }
+  };
+  window.dispatchEvent(new CustomEvent("fb-sdk-ready"));
+</script>
+<style>
+:root{
+  --navy-950:#332920;
+  --navy-900:#453829;
+  --navy-800:#524331;
+  --navy-700:#6b5a44;
+  --navy-600:#8a7860;
+  --navy-500:#a8987f;
+  --blue-accent:#66788e;
+  --blue-accent-d:#546276;
+  --ink:#4a3f30;
+  --ink-soft:#8a7f70;
+  --line:#d7dbe0;
+  --line-soft:#e7eaed;
+  --bg:#e3e7eb;
+  --card:#f8f7f3;
+  --green:#1f8a5f;
+  --green-bg:#e5f5ee;
+  --amber:#b8790a;
+  --amber-bg:#fbf0dd;
+  --red:#c0392b;
+  --red-bg:#fbe9e7;
+  --shadow:0 1px 2px rgba(60,50,35,0.07),0 4px 14px rgba(60,50,35,0.08);
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:60px;
+  overflow-x:auto;
+}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";}
+::selection{background:#c7d1da;}
+
+/* ---------- Store bar (門市選擇, sits above the campaign topbar) ---------- */
+.storebar{
+  background:var(--card);border-bottom:1px solid var(--line);
+  padding:8px 20px;
+}
+.storebar-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.storebar-label{font-size:11.5px;font-weight:700;color:var(--ink-soft);flex:0 0 auto;}
+.store-tabs{display:flex;gap:6px;flex-wrap:wrap;flex:1;}
+.store-tab{
+  border:1px solid var(--line);background:#fff;color:var(--ink-soft);font-weight:700;font-size:12.5px;
+  padding:5px 13px;border-radius:999px;cursor:pointer;font-family:inherit;
+}
+.store-tab.active{background:var(--blue-accent);border-color:var(--blue-accent);color:#fff;}
+.store-tab-add{
+  border:1px dashed var(--line);background:transparent;color:var(--ink-soft);font-weight:600;font-size:12px;
+  padding:5px 12px;border-radius:999px;cursor:pointer;font-family:inherit;
+}
+.store-tab-add:hover{border-color:var(--blue-accent);color:var(--blue-accent-d);}
+.conn-status{
+  margin-left:auto;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;
+  background:var(--line-soft);color:var(--ink-soft);white-space:nowrap;
+}
+.conn-status.on{background:var(--green-bg);color:var(--green);}
+.conn-status.off{background:var(--red-bg);color:var(--red);}
+
+/* ---------- Top bar (NOT sticky, compact) ---------- */
+.topbar{
+  background:linear-gradient(135deg,var(--navy-950),var(--navy-800));
+  color:#fff;
+  padding:9px 20px;
+}
+.topbar-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.topbar-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.btn{
+  border:none;border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:600;
+  cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  font-family:inherit;transition:transform .08s ease,opacity .15s ease,background .15s ease;
+  white-space:nowrap;
+}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:var(--blue-accent);color:#fff;}
+.btn-primary:hover{background:var(--blue-accent-d);}
+.btn-ghost{background:rgba(255,255,255,0.1);color:#fff;}
+.btn-ghost:hover{background:rgba(255,255,255,0.18);}
+.btn-light{background:#fff;color:var(--navy-800);border:1px solid var(--line);}
+.btn-light:hover{background:#f2f6f9;}
+.btn-danger{background:var(--red-bg);color:var(--red);}
+.btn-danger:hover{background:#f8d9d4;}
+.btn-sm{padding:6px 10px;font-size:12.5px;border-radius:7px;}
+.btn-xs{padding:5px 9px;font-size:11px;border-radius:6px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* ---------- Campaign tabs (compact tag-style, same row as topbar) ---------- */
+.tabbar{display:flex;gap:5px;overflow-x:auto;flex:1;min-width:0;}
+.tab{
+  flex:0 0 auto;padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;
+  background:rgba(255,255,255,0.08);color:#c6d5e3;cursor:pointer;border:none;
+  font-family:inherit;white-space:nowrap;position:relative;
+}
+.tab.active{background:var(--blue-accent);color:#fff;}
+.tab-add{
+  flex:0 0 auto;padding:5px 11px;border-radius:6px;font-size:11.5px;font-weight:600;
+  background:rgba(255,255,255,0.03);color:#9db4cc;border:1px dashed rgba(255,255,255,0.3);
+  cursor:pointer;font-family:inherit;
+}
+.tab-add:hover{color:#fff;border-color:#fff;}
+
+/* ---------- Page container ---------- */
+.page{max-width:1180px;margin:0 auto;padding:0 20px;}
+
+/* ---------- Summary block (meta + subtabs + stats) — normal flow, NOT sticky ---------- */
+.summary-block{
+  padding-top:16px;padding-bottom:14px;
+}
+.meta-card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px 18px;display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;box-shadow:var(--shadow);margin-bottom:10px;
+}
+.meta-left{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.meta-type-pill{
+  font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;
+  background:var(--navy-700);color:#fff;
+}
+.meta-name{font-size:17px;font-weight:700;color:var(--navy-900);}
+.meta-period{font-size:13px;color:var(--ink-soft);}
+.meta-actions{display:flex;gap:8px;}
+
+/* view sub-tabs (客詢紀錄 / 訂金明細) */
+.subtab-row{display:flex;gap:6px;margin-bottom:10px;}
+.subtab{
+  border:1px solid var(--line);background:#fff;color:var(--ink-soft);font-weight:700;font-size:13px;
+  padding:8px 16px;border-radius:9px;cursor:pointer;font-family:inherit;
+}
+.subtab.active{background:var(--navy-900);color:#fff;border-color:var(--navy-900);}
+.subtab .count{margin-left:6px;opacity:.75;font-weight:600;}
+
+.stats-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;
+}
+.stat-card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px 14px;box-shadow:var(--shadow);
+}
+.stat-label{font-size:11.5px;color:var(--ink-soft);margin-bottom:5px;}
+.stat-value{font-size:20px;font-weight:700;color:var(--navy-900);}
+.stat-value small{font-size:12px;font-weight:600;color:var(--ink-soft);margin-left:2px;}
+.stat-sub{font-size:11px;color:#8a9aa8;margin-top:3px;}
+
+/* below the fold (NOT sticky) */
+.below-fold{padding-top:16px;}
+
+/* breakdown panels */
+.breakdown-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:18px;}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);}
+.panel h3{margin:0 0 10px;font-size:13.5px;color:var(--navy-800);font-weight:700;}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12.5px;}
+.bar-row:last-child{margin-bottom:0;}
+.bar-label{width:92px;flex:0 0 92px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bar-track{flex:1;height:8px;background:var(--line-soft);border-radius:5px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:5px;background:var(--blue-accent);}
+.bar-val{width:78px;flex:0 0 78px;text-align:right;color:var(--navy-900);font-weight:600;}
+
+/* ---------- Filter bar (STICKY — fixed content starts here) ---------- */
+.filter-bar{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  position:sticky;top:0;z-index:37;background:var(--bg);
+  padding:10px 0;margin-bottom:2px;
+  box-shadow:0 6px 10px -8px rgba(15,30,51,0.16);
+}
+.filter-bar select,.filter-bar input[type=text],.filter-bar input[type=date]{
+  font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);
+  border-radius:7px;background:#fff;color:var(--ink);
+}
+.filter-spacer{flex:1;}
+.result-count{font-size:12.5px;color:var(--ink-soft);}
+
+/* ---------- Table (no overflow here — that would hijack thead's sticky context; horizontal scroll happens at body level instead) ---------- */
+.table-wrap{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);margin-bottom:22px;margin-top:10px;
+}
+table{width:100%;border-collapse:collapse;min-width:1040px;}
+thead th{
+  position:sticky;top:var(--thead-top,0px);background:var(--navy-900);color:#dfeaf3;
+  font-size:12px;font-weight:600;text-align:left;padding:10px 12px;
+  white-space:nowrap;cursor:pointer;user-select:none;z-index:36;
+}
+thead th.no-sort{cursor:default;}
+thead th .arrow{margin-left:3px;opacity:.6;font-size:10px;}
+tbody td{padding:9px 12px;font-size:13px;border-bottom:1px solid var(--line-soft);white-space:nowrap;}
+tbody tr:hover{background:#f7fafc;}
+tbody tr:last-child td{border-bottom:none;}
+td.amount{text-align:right;font-weight:600;color:var(--navy-900);}
+td.center{text-align:center;}
+.chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;color:#fff;}
+.winrate-chip{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11.5px;font-weight:700;}
+.wr-high{background:var(--green-bg);color:var(--green);}
+.wr-mid{background:var(--amber-bg);color:var(--amber);}
+.wr-low{background:var(--red-bg);color:var(--red);}
+.wr-none{background:var(--line-soft);color:#8a9aa8;}
+.bool-chip{border:none;font-family:inherit;font-size:11.5px;font-weight:700;padding:3px 11px;border-radius:999px;cursor:pointer;}
+.bool-chip.on{background:var(--green-bg);color:var(--green);}
+.bool-chip.off{background:var(--line-soft);color:#9aa9b6;}
+.bool-chip:hover{filter:brightness(0.97);}
+.note-dot{
+  width:11px;height:11px;border-radius:50%;border:none;cursor:pointer;padding:0;
+  display:inline-block;vertical-align:middle;
+}
+.note-dot.has{background:var(--green);box-shadow:0 0 0 3px var(--green-bg);}
+.note-dot.none{background:#c7d0d8;box-shadow:0 0 0 3px var(--line-soft);}
+.note-dot:hover{filter:brightness(0.92);}
+.status-tag{
+  display:inline-block;border:none;font-family:inherit;font-size:10.5px;font-weight:700;
+  padding:2px 8px;border-radius:999px;cursor:pointer;vertical-align:middle;
+}
+.status-tag.tag-ship{background:#e6eaee;color:var(--navy-700);}
+.status-tag.tag-pickup{background:var(--amber-bg);color:var(--amber);}
+.status-tag.tag-done{background:var(--green-bg);color:var(--green);}
+.status-tag:hover{filter:brightness(0.95);}
+.row-actions{display:flex;gap:6px;}
+.icon-btn{
+  border:none;background:transparent;cursor:pointer;color:#8a9aa8;font-size:14px;padding:4px 6px;border-radius:6px;
+}
+.icon-btn:hover{background:var(--line-soft);color:var(--navy-800);}
+.icon-btn.del:hover{background:var(--red-bg);color:var(--red);}
+.empty-row td{text-align:center;color:#9aa9b6;padding:34px 12px;font-size:13.5px;}
+.items-list{font-size:12.5px;color:var(--ink-soft);word-break:keep-all;overflow-wrap:break-word;}
+.items-list b{color:var(--ink);font-weight:600;}
+.item-line{display:block;margin-bottom:2px;}
+.item-line:last-child{margin-bottom:0;}
+
+.footer-actions{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:30px;}
+.footnote{font-size:11.5px;color:#9aa9b6;}
+
+/* ---------- Modal ---------- */
+.overlay{
+  position:fixed;inset:0;background:rgba(11,21,36,0.5);display:none;
+  align-items:flex-start;justify-content:center;z-index:100;padding:6vh 16px;overflow-y:auto;
+}
+.overlay.show{display:flex;}
+.modal{
+  background:#fff;border-radius:14px;width:100%;max-width:480px;box-shadow:0 20px 50px rgba(0,0,0,0.25);
+  animation:pop .15s ease;
+}
+.modal.wide{max-width:640px;}
+@keyframes pop{from{transform:translateY(6px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+.modal-head h2{margin:0;font-size:16px;color:var(--navy-900);}
+.modal-close{border:none;background:none;font-size:18px;cursor:pointer;color:#9aa9b6;}
+.modal-body{padding:18px 20px;max-height:64vh;overflow-y:auto;}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+.field input[type=text],.field input[type=number],.field input[type=date],.field input[type=email],.field input[type=tel],.field select,.field textarea{
+  width:100%;font-family:inherit;font-size:13.5px;padding:9px 11px;border:1px solid var(--line);
+  border-radius:8px;background:#fff;color:var(--ink);
+}
+.field textarea{resize:vertical;min-height:56px;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.field-row.three{grid-template-columns:1fr 1fr 1fr;}
+.hint{font-size:11.5px;color:#9aa9b6;margin-top:4px;}
+.checkline{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink);padding:8px 0;}
+.checkline input{width:16px;height:16px;}
+.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px;}
+.type-opt{
+  border:1px solid var(--line);border-radius:8px;padding:8px 6px;text-align:center;font-size:12.5px;
+  cursor:pointer;background:#fbfcfd;color:var(--ink-soft);font-weight:600;
+}
+.type-opt.selected{border-color:var(--blue-accent);background:#e6eaee;color:var(--navy-800);}
+
+/* deposit item rows in modal */
+.item-row{display:grid;grid-template-columns:1fr 60px 84px 32px;gap:8px;margin-bottom:8px;align-items:center;}
+.item-row input,.item-row select{width:100%;font-family:inherit;font-size:13px;padding:8px 9px;border:1px solid var(--line);border-radius:7px;}
+.item-remove{border:none;background:var(--red-bg);color:var(--red);border-radius:7px;height:34px;cursor:pointer;font-size:14px;}
+
+/* option manager (settings) */
+.opt-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.opt-item{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;position:relative;}
+.opt-item input[type=text]{border:none;flex:1;font-size:13px;font-family:inherit;background:transparent;}
+.opt-item input[type=text]:focus{outline:none;}
+.swatch{width:20px;height:20px;border-radius:6px;flex:0 0 20px;border:1px solid rgba(0,0,0,0.08);cursor:pointer;}
+.color-pop{display:flex;gap:6px;flex-wrap:wrap;padding:8px 6px;position:absolute;top:38px;left:0;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);z-index:5;}
+.color-pop span{width:20px;height:20px;border-radius:6px;cursor:pointer;border:2px solid transparent;}
+.color-pop span.on{border-color:var(--navy-900);}
+.subhead{font-size:12.5px;font-weight:700;color:var(--navy-800);margin:16px 0 8px;}
+.subhead:first-child{margin-top:0;}
+
+/* toast */
+.toast-wrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center;}
+.toast{background:var(--navy-900);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,0.25);opacity:0;transform:translateY(8px);transition:all .2s ease;}
+.toast.show{opacity:1;transform:translateY(0);}
+
+@media(max-width:640px){
+  .field-row,.field-row.three{grid-template-columns:1fr;}
+  .type-grid{grid-template-columns:repeat(2,1fr);}
+  .brand-title{font-size:16px;}
+}
+</style>
+</head>
+<body>
+
+<div class="storebar">
+  <div class="storebar-inner">
+    <span class="storebar-label">門市</span>
+    <div class="store-tabs" id="storeTabs"></div>
+    <button class="store-tab-add" id="btnAddStore">＋ 新增門市</button>
+    <span class="conn-status" id="connStatus">連線中…</span>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="tabbar" id="tabbar"></div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-xs" id="btnSettings">⚙️ 設定</button>
+      <button class="btn btn-ghost btn-xs" id="btnExportJson">匯出</button>
+      <button class="btn btn-ghost btn-xs" id="btnImportJson">匯入</button>
+      <input type="file" id="fileImport" accept=".json" style="display:none">
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="summary-block">
+    <div class="meta-card" id="metaCard"></div>
+    <div class="subtab-row" id="subtabRow"></div>
+    <div class="stats-grid" id="statsGrid"></div>
+  </div>
+
+  <div class="below-fold">
+
+    <div class="breakdown-grid" id="breakdownGrid"></div>
+
+    <!-- 客詢紀錄 view -->
+    <div id="viewInquiry">
+      <div class="filter-bar">
+        <select id="filterType"><option value="">全部客人類型</option></select>
+        <select id="filterSales"><option value="">全部業務</option></select>
+        <select id="filterDeal">
+          <option value="">全部成交狀態</option>
+          <option value="purchased">已購買</option>
+          <option value="notified">已通知未購</option>
+          <option value="none">尚未通知</option>
+        </select>
+        <input type="text" id="filterKeyword" placeholder="搜尋商品／客人資料…">
+        <div class="filter-spacer"></div>
+        <span class="result-count" id="resultCountInquiry"></span>
+        <button class="btn btn-primary btn-sm" id="btnAddRecord">＋ 新增詢問紀錄</button>
+        <button class="btn btn-light btn-sm" id="btnExportCsvInquiry">匯出 CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="tableHeadRowInquiry"></tr></thead>
+          <tbody id="tableBodyInquiry"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 訂金明細 view -->
+    <div id="viewDeposit" style="display:none;">
+      <div class="filter-bar">
+        <select id="filterDepSales"><option value="">全部業務</option></select>
+        <select id="filterDepPayment"><option value="">全部付款方式</option></select>
+        <select id="filterDepPickup">
+          <option value="">全部配送狀態</option>
+          <option value="pending">含待自取商品</option>
+          <option value="done">已完成（無待自取）</option>
+        </select>
+        <input type="text" id="filterDepKeyword" placeholder="搜尋訂單編號／商品／客人…">
+        <div class="filter-spacer"></div>
+        <span class="result-count" id="resultCountDeposit"></span>
+        <button class="btn btn-primary btn-sm" id="btnAddDeposit">＋ 新增訂金訂單</button>
+        <button class="btn btn-light btn-sm" id="btnExportCsvDeposit">匯出 CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="tableHeadRowDeposit"></tr></thead>
+          <tbody id="tableBodyDeposit"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer-actions">
+      <span class="footnote" id="lastSaved"></span>
+    </div>
+
+  </div>
+</div>
+
+<!-- Add/Edit Campaign Modal -->
+<div class="overlay" id="overlayCampaign">
+  <div class="modal">
+    <div class="modal-head"><h2 id="campaignModalTitle">新增檔期</h2><button class="modal-close" data-close="overlayCampaign">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>檔期類型</label>
+        <div class="type-grid" id="campaignTypeGrid"></div>
+      </div>
+      <div class="field">
+        <label>檔期名稱</label>
+        <input type="text" id="campaignNameInput" placeholder="例如：2026 周年慶預購">
+      </div>
+      <div class="field-row">
+        <div class="field"><label>開始日期</label><input type="date" id="campaignStartInput"></div>
+        <div class="field"><label>結束日期</label><input type="date" id="campaignEndInput"></div>
+      </div>
+      <div class="hint">日期用於自動顯示檔期區間，詢問紀錄／訂金明細的日期仍需個別填寫。</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-light btn-sm" data-close="overlayCampaign">取消</button>
+      <button class="btn btn-primary btn-sm" id="btnSaveCampaign">儲存檔期</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Store Modal (門市) -->
+<div class="overlay" id="overlayStore">
+  <div class="modal">
+    <div class="modal-head"><h2>新增門市</h2><button class="modal-close" data-close="overlayStore">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>門市名稱</label>
+        <input type="text" id="storeNameInput" placeholder="例如：新莊宏匯">
+      </div>
+      <div class="hint">新門市會有獨立的檔期資料，不會跟其他門市互相影響。</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-light btn-sm" data-close="overlayStore">取消</button>
+      <button class="btn btn-primary btn-sm" id="btnSaveStore">新增門市</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Record Modal (客詢紀錄) -->
+<div class="overlay" id="overlayRecord">
+  <div class="modal">
+    <div class="modal-head"><h2 id="recordModalTitle">新增詢問紀錄</h2><button class="modal-close" data-close="overlayRecord">✕</button></div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field"><label>日期</label><input type="date" id="rDate"></div>
+        <div class="field"><label>當下金額</label><input type="number" id="rAmount" placeholder="0"></div>
+      </div>
+      <div class="field"><label>詢問商品</label><input type="text" id="rProduct" placeholder="例如：x12pro 上下水"></div>
+      <div class="field-row">
+        <div class="field"><label>客人類型</label><select id="rCustomerType"></select></div>
+        <div class="field"><label>業務</label><select id="rSales"></select></div>
+      </div>
+      <div class="field">
+        <label>勝率 %</label>
+        <select id="rWinRate">
+          <option value="">未評估</option>
+          <option value="100">100%</option><option value="90">90%</option><option value="85">85%</option>
+          <option value="80">80%</option><option value="70">70%</option><option value="60">60%</option>
+          <option value="50">50%</option><option value="30">30%</option><option value="10">10%</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>客人資料（姓名／電話）</label><input type="text" id="rCustomerInfo" placeholder="例如：劉小姐 0912345678"></div>
+        <div class="field"><label>Email</label><input type="email" id="rEmail" placeholder="選填"></div>
+      </div>
+      <div class="field-row">
+        <label class="checkline"><input type="checkbox" id="rNotified"> 已通知客人</label>
+        <label class="checkline"><input type="checkbox" id="rPurchased"> 已成功購買（成交）</label>
+      </div>
+      <div class="field">
+        <label>備註（選填，內部使用）</label>
+        <textarea id="rNotes" placeholder="例如：客人希望等第二波優惠再下單"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-light btn-sm" data-close="overlayRecord">取消</button>
+      <button class="btn btn-primary btn-sm" id="btnSaveRecord">儲存紀錄</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Deposit Modal (訂金明細) -->
+<div class="overlay" id="overlayDeposit">
+  <div class="modal wide">
+    <div class="modal-head"><h2 id="depositModalTitle">新增訂金訂單</h2><button class="modal-close" data-close="overlayDeposit">✕</button></div>
+    <div class="modal-body">
+      <div class="field-row three">
+        <div class="field"><label>付訂日期</label><input type="date" id="dDate"></div>
+        <div class="field"><label>訂單編號</label><input type="text" id="dOrderNo" placeholder="選填，例如 294133"></div>
+        <div class="field"><label>付訂金額</label><input type="number" id="dAmount" placeholder="0"></div>
+      </div>
+      <div class="field-row three">
+        <div class="field"><label>付款方式</label><select id="dPayment"></select></div>
+        <div class="field"><label>業務</label><select id="dSales"></select></div>
+        <div class="field"><label>電話</label><input type="tel" id="dPhone" placeholder="選填"></div>
+      </div>
+      <div class="field"><label>客人姓名</label><input type="text" id="dCustomerName" placeholder="選填"></div>
+      <div class="field-row">
+        <label class="checkline"><input type="checkbox" id="dVoucher"> 兌換券</label>
+        <label class="checkline"><input type="checkbox" id="dMember"> Beutii 會員</label>
+      </div>
+      <div class="field">
+        <label>訂購商品（可新增多筆，逐項設定配送狀態）</label>
+        <div id="depositItemsContainer"></div>
+        <button class="btn btn-light btn-sm" id="btnAddItemRow" type="button">＋ 新增商品項目</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-light btn-sm" data-close="overlayDeposit">取消</button>
+      <button class="btn btn-primary btn-sm" id="btnSaveDeposit">儲存訂單</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="overlay" id="overlaySettings">
+  <div class="modal wide">
+    <div class="modal-head"><h2>選項設定</h2><button class="modal-close" data-close="overlaySettings">✕</button></div>
+    <div class="modal-body">
+      <div class="subhead">客人類型選項</div>
+      <div class="opt-list" id="customerTypeList"></div>
+      <button class="btn btn-light btn-sm" id="btnAddCustomerType">＋ 新增客人類型</button>
+
+      <div class="subhead">業務代號選項（含顏色）</div>
+      <div class="opt-list" id="salesList"></div>
+      <button class="btn btn-light btn-sm" id="btnAddSales">＋ 新增業務代號</button>
+
+      <div class="subhead">付款方式選項</div>
+      <div class="opt-list" id="paymentList"></div>
+      <button class="btn btn-light btn-sm" id="btnAddPayment">＋ 新增付款方式</button>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary btn-sm" data-close="overlaySettings">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="overlay" id="overlayConfirm">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-head"><h2 id="confirmTitle">確認操作</h2><button class="modal-close" data-close="overlayConfirm">✕</button></div>
+    <div class="modal-body"><p id="confirmMsg" style="font-size:13.5px;color:var(--ink-soft);margin:0;"></p></div>
+    <div class="modal-foot">
+      <button class="btn btn-light btn-sm" data-close="overlayConfirm">取消</button>
+      <button class="btn btn-danger btn-sm" id="btnConfirmOk">確認刪除</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= Constants ================= */
+var STORAGE_KEY = 'beutii_inquiry_system_v2';
+var SCHEMA_VERSION = 3;
+var CAMPAIGN_TYPES = ['周年慶','春節','母親節','父親節','年中慶','其他'];
+var COLOR_PALETTE = ['#0e1424','#374254','#8a8fa3','#adbbc6','#ececec'];
+
+var INQUIRY_COLS = [
+  {key:'date', label:'日期', sortable:true, width:'100px'},
+  {key:'product', label:'詢問商品', sortable:true},
+  {key:'amount', label:'當下金額', sortable:true, align:'right'},
+  {key:'customerType', label:'客人類型', sortable:true},
+  {key:'sales', label:'業務', sortable:true},
+  {key:'winRate', label:'勝率%', sortable:true},
+  {key:'notified', label:'已通知', sortable:true},
+  {key:'purchased', label:'已購買', sortable:true},
+  {key:'notes', label:'備註', sortable:false, width:'50px', align:'center'},
+  {key:'customerInfo', label:'客人資料', sortable:false},
+  {key:'email', label:'Email', sortable:false},
+  {key:'actions', label:'', sortable:false}
+];
+
+var DEPOSIT_COLS = [
+  {key:'date', label:'付訂日期', sortable:true, width:'100px'},
+  {key:'orderNo', label:'訂單編號', sortable:true},
+  {key:'items', label:'商品', sortable:false},
+  {key:'amount', label:'付訂金額', sortable:true, align:'right'},
+  {key:'paymentMethod', label:'付款方式', sortable:true},
+  {key:'voucher', label:'兌換券', sortable:true},
+  {key:'member', label:'Beutii會員', sortable:true},
+  {key:'sales', label:'業務', sortable:true},
+  {key:'customerName', label:'客人姓名', sortable:false},
+  {key:'phone', label:'電話', sortable:false},
+  {key:'actions', label:'', sortable:false}
+];
+
+/* ================= State ================= */
+var state = null;
+var activeView = 'inquiry'; // 'inquiry' | 'deposit'
+var sortInquiry = {key:'date', dir:'desc'};
+var sortDeposit = {key:'date', dir:'desc'};
+var editingRecordId = null;
+var editingDepositId = null;
+var editingCampaignId = null;
+var confirmCallback = null;
+var depositItemCounter = 0;
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+function defaultSettings(){
+  return {
+    customerTypes: ['小家庭/新手爸媽','單身族','長輩','頂客族'],
+    salesReps: [
+      {id:'129', name:'129', color:'#0e1424'},
+      {id:'450', name:'450', color:'#374254'},
+      {id:'325', name:'325', color:'#8a8fa3'}
+    ],
+    paymentMethods: ['現金','信用卡','LINE Pay','轉帳']
+  };
+}
+
+function defaultState(){
+  return {
+    version: SCHEMA_VERSION,
+    activeStoreId: null,
+    settings: defaultSettings(),
+    stores: []
+  };
+}
+
+function newStore(name){
+  return { id: uid(), name: name, activeCampaignId: null, campaigns: [] };
+}
+
+function seedData(){
+  var s = defaultState();
+  var campId = uid();
+  var rows = [
+    ['2026-09-06','TINECO I7',11177,'小家庭/新手爸媽','129','90','',''],
+    ['2026-09-06','ECOVACS 擦窗機器人',8999,'小家庭/新手爸媽','129','90','',''],
+    ['2026-09-06','GR600 RO',40880,'小家庭/新手爸媽','450','90','',''],
+    ['2026-09-06','添可S7 SWITCH',15988,'小家庭/新手爸媽','450','80','',''],
+    ['2026-09-07','x12pro 上下水',29999,'單身族','450','70','',''],
+    ['2026-09-07','x12pro 上下水',29999,'小家庭/新手爸媽','450','100','',''],
+    ['2026-09-11','添可S7/S9Artist pro',15988,'長輩','450','85','劉馨儒 0986328674',''],
+    ['2026-09-11','添可S7 SWITCH',16688,'小家庭/新手爸媽','129','70','簡小姐 0953666796',''],
+    ['2026-09-11','BERITA GR600 RO 瞬熱',40988,'小家庭/新手爸媽','450','70','蕭先生 0930395367',''],
+    ['2026-09-13','添可s7 switch',16688,'頂客族','450','80','劉先生 0989099013',''],
+    ['2026-09-13','x12pro 上下水',24999,'長輩','450','68','',''],
+    ['2026-09-13','X12pro 水箱版',24999,'小家庭/新手爸媽','325','','','']
+  ];
+  var deposits = [
+    {orderNo:'294133', date:'2026-09-12', paymentMethod:'現金', voucher:true, member:false, sales:'325', customerName:'鐘于翔', phone:'0932270497', amount:0,
+      items:[{product:'ECOVACS DEEBOT X12 PRO 滾筒洗地機器人', qty:1, status:'自取'},{product:'ACERPURE SV534-11W CLEAN 無線吸塵器(簡配)', qty:1, status:'宅配'}]},
+    {orderNo:'294134', date:'2026-09-12', paymentMethod:'現金', voucher:true, member:true, sales:'450', customerName:'趙于捷', phone:'0983594310', amount:18990,
+      items:[{product:'BALMUDA K09C-DG 微波烤箱(深灰)', qty:1, status:'已取'},{product:'BONSON BO-A32 超神平板拖', qty:1, status:'已取'}]},
+    {orderNo:'294136', date:'2026-09-13', paymentMethod:'現金', voucher:true, member:false, sales:'325', customerName:'方郁棋', phone:'0987520533', amount:1000,
+      items:[{product:'ECOVACS DEEBOT X12 PRO 滾筒洗地機器人', qty:1, status:'自取'},{product:'SIROCA SP-5D1520 智能電子萬用壓力鍋(白)(展示品)', qty:2, status:'宅配'}]},
+    {orderNo:'294137', date:'2026-09-13', paymentMethod:'現金', voucher:false, member:false, sales:'450', customerName:'胡雅棋', phone:'0921933608', amount:1000,
+      items:[{product:'ACERPURE WP744-40W AQUA WP5 冰溫瞬熱', qty:1, status:'自取'},{product:'ECOVACS DEEBOT X12 PRO 滾筒洗地機器人', qty:1, status:'自取'}]}
+  ];
+  var store = newStore('信義統一');
+  store.campaigns.push({
+    id: campId,
+    type: '周年慶',
+    name: '2026 周年慶預購',
+    start: '2026-10-01',
+    end: '2026-10-07',
+    inquiries: rows.map(function(r){
+      return {
+        id: uid(), date:r[0], product:r[1], amount:r[2], customerType:r[3],
+        sales:r[4], winRate:r[5]===''?null:Number(r[5]), customerInfo:r[6], email:r[7],
+        notified:false, purchased:false, notes:''
+      };
+    }),
+    deposits: deposits.map(function(d){
+      return {
+        id: uid(), orderNo:d.orderNo, date:d.date, paymentMethod:d.paymentMethod,
+        voucher:d.voucher, member:d.member, sales:d.sales,
+        customerName:d.customerName, phone:d.phone, amount:d.amount,
+        items: d.items.map(function(it){ return {id:uid(), product:it.product, qty:it.qty, status:it.status}; })
+      };
+    })
+  });
+  store.activeCampaignId = campId;
+  s.stores.push(store);
+  s.stores.push(newStore('信義Dreame'));
+  s.activeStoreId = store.id;
+  return s;
+}
+
+var ITEM_STATUS_OPTIONS = ['宅配','自取','已取'];
+
+function migrateCampaignsArray(campaigns){
+  campaigns.forEach(function(c){
+    // v1 used "records" for inquiries
+    if(!Array.isArray(c.inquiries)){
+      c.inquiries = Array.isArray(c.records) ? c.records : [];
+    }
+    delete c.records;
+    if(!Array.isArray(c.deposits)) c.deposits = [];
+    c.inquiries.forEach(function(r){
+      if(r.amount === undefined || r.amount === null || r.amount === '') r.amount = 0;
+      r.amount = Number(r.amount) || 0;
+      if(r.winRate !== null && r.winRate !== undefined && r.winRate !== ''){ r.winRate = Number(r.winRate); }
+      else { r.winRate = null; }
+      if(typeof r.notified !== 'boolean') r.notified = false;
+      if(typeof r.purchased !== 'boolean') r.purchased = false;
+      if(typeof r.notes !== 'string') r.notes = '';
+    });
+    c.deposits.forEach(function(d){
+      d.amount = Number(d.amount) || 0;
+      if(typeof d.voucher !== 'boolean') d.voucher = false;
+      if(typeof d.member !== 'boolean') d.member = false;
+      if(!Array.isArray(d.items)) d.items = [];
+      // old "先取貨" boolean → per-item status (已取 if it was marked picked up, else 自取)
+      var fallbackStatus = d.pickupFirst ? '已取' : '自取';
+      d.items.forEach(function(it){
+        if(ITEM_STATUS_OPTIONS.indexOf(it.status) === -1){ it.status = fallbackStatus; }
+      });
+      delete d.pickupFirst;
+    });
+  });
+}
+
+function migrate(raw){
+  if(!raw || typeof raw !== 'object') return null;
+  if(!raw.version) raw.version = 1;
+  if(!raw.settings) raw.settings = defaultSettings();
+  if(!raw.settings.customerTypes) raw.settings.customerTypes = defaultSettings().customerTypes;
+  if(!raw.settings.salesReps) raw.settings.salesReps = defaultSettings().salesReps;
+  if(!raw.settings.paymentMethods) raw.settings.paymentMethods = defaultSettings().paymentMethods;
+
+  // pre-v3 files kept a single flat "campaigns" array — wrap it into a store
+  if(!Array.isArray(raw.stores)){
+    var wrapped = newStore('信義統一');
+    wrapped.campaigns = Array.isArray(raw.campaigns) ? raw.campaigns : [];
+    wrapped.activeCampaignId = raw.activeCampaignId || null;
+    raw.stores = [wrapped];
+    raw.activeStoreId = wrapped.id;
+    delete raw.campaigns;
+    delete raw.activeCampaignId;
+  }
+  if(!Array.isArray(raw.stores) || !raw.stores.length){ raw.stores = [newStore('信義統一')]; }
+  raw.stores.forEach(function(st){
+    if(!Array.isArray(st.campaigns)) st.campaigns = [];
+    migrateCampaignsArray(st.campaigns);
+  });
+  if(!raw.activeStoreId || !raw.stores.some(function(s){return s.id===raw.activeStoreId;})){
+    raw.activeStoreId = raw.stores[0].id;
+  }
+  raw.version = SCHEMA_VERSION;
+  return raw;
+}
+
+function loadStateLocalFallback(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      var parsed = migrate(JSON.parse(raw));
+      if(parsed && parsed.stores.length) return parsed;
+    }
+  }catch(e){
+    console.error('讀取本機備援資料失敗', e);
+  }
+  return seedData();
+}
+
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){
+    console.error('本機備援儲存失敗', e);
+  }
+  var el = document.getElementById('lastSaved');
+  if(window.FB){
+    window.FB.save(state).then(function(){
+      if(el) el.textContent = '已同步至雲端 ' + new Date().toLocaleTimeString('zh-TW',{hour12:false});
+    }).catch(function(err){
+      console.error('雲端同步失敗', err);
+      if(el) el.textContent = '⚠️ 雲端同步失敗，已存在本機';
+      toast('⚠️ 雲端同步失敗，請檢查網路連線（資料已暫存在本機）');
+    });
+  } else if(el){
+    el.textContent = '已儲存在本機 ' + new Date().toLocaleTimeString('zh-TW',{hour12:false});
+  }
+}
+
+/* ================= Helpers ================= */
+function fmtMoney(n){ n = Number(n)||0; return n.toLocaleString('zh-TW'); }
+function fmtDate(d){
+  if(!d) return '—';
+  var parts = d.split('-');
+  if(parts.length!==3) return d;
+  return parts[0]+'/'+Number(parts[1])+'/'+Number(parts[2]);
+}
+function activeStore(){
+  return state.stores.find(function(s){return s.id===state.activeStoreId;}) || null;
+}
+function activeCampaign(){
+  var store = activeStore();
+  if(!store) return null;
+  return store.campaigns.find(function(c){return c.id===store.activeCampaignId;}) || null;
+}
+function salesRepColor(name){
+  var rep = state.settings.salesReps.find(function(r){return r.name===name;});
+  return rep ? rep.color : '#7f8c8d';
+}
+function winRateClass(v){
+  if(v===null||v===undefined||v==='') return 'wr-none';
+  if(v>=80) return 'wr-high';
+  if(v>=50) return 'wr-mid';
+  return 'wr-low';
+}
+function statusClass(status){
+  if(status==='已取') return 'done';
+  if(status==='自取') return 'pickup';
+  return 'ship';
+}
+function chipTextColor(hex){
+  hex = (hex||'').replace('#','');
+  if(hex.length===3){ hex = hex.split('').map(function(c){return c+c;}).join(''); }
+  if(hex.length!==6) return '#fff';
+  var r = parseInt(hex.substr(0,2),16), g = parseInt(hex.substr(2,2),16), b = parseInt(hex.substr(4,2),16);
+  var luminance = (0.299*r + 0.587*g + 0.114*b)/255;
+  return luminance > 0.6 ? '#332f2a' : '#ffffff';
+}
+function toast(msg){
+  var wrap = document.getElementById('toastWrap');
+  var t = document.createElement('div');
+  t.className='toast';
+  t.textContent = msg;
+  wrap.appendChild(t);
+  requestAnimationFrame(function(){ t.classList.add('show'); });
+  setTimeout(function(){
+    t.classList.remove('show');
+    setTimeout(function(){ wrap.removeChild(t); }, 250);
+  }, 2400);
+}
+function openOverlay(id){ document.getElementById(id).classList.add('show'); }
+function closeOverlay(id){ document.getElementById(id).classList.remove('show'); }
+function escapeHtml(s){
+  if(s===null||s===undefined) return '';
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function escapeAttr(s){ return escapeHtml(s); }
+function debounce(fn, ms){
+  var t;
+  return function(){
+    var args = arguments;
+    clearTimeout(t);
+    t = setTimeout(function(){ fn.apply(null,args); }, ms);
+  };
+}
+
+/* ================= Render: Tabs & Meta ================= */
+function renderStoreTabs(){
+  var bar = document.getElementById('storeTabs');
+  bar.innerHTML = '';
+  state.stores.forEach(function(st){
+    var b = document.createElement('button');
+    b.className = 'store-tab' + (st.id===state.activeStoreId ? ' active' : '');
+    b.textContent = st.name;
+    b.onclick = function(){ state.activeStoreId = st.id; saveState(); renderAll(); };
+    bar.appendChild(b);
+  });
+}
+
+function renderTabs(){
+  var bar = document.getElementById('tabbar');
+  bar.innerHTML = '';
+  var store = activeStore();
+  if(!store) return;
+  store.campaigns.forEach(function(c){
+    var b = document.createElement('button');
+    b.className = 'tab' + (c.id===store.activeCampaignId ? ' active' : '');
+    b.textContent = c.name;
+    b.onclick = function(){ store.activeCampaignId = c.id; saveState(); renderAll(); };
+    bar.appendChild(b);
+  });
+  var addBtn = document.createElement('button');
+  addBtn.className = 'tab-add';
+  addBtn.textContent = '＋ 新增檔期';
+  addBtn.onclick = function(){ openCampaignModal(null); };
+  bar.appendChild(addBtn);
+}
+
+function renderMeta(){
+  var camp = activeCampaign();
+  var card = document.getElementById('metaCard');
+  if(!camp){
+    card.innerHTML = '<div class="footnote">此門市尚無檔期，請先新增一個檔期。</div>';
+    return;
+  }
+  var periodText = (camp.start||camp.end) ? (fmtDate(camp.start)+' ～ '+fmtDate(camp.end)) : '未設定期間';
+  card.innerHTML =
+    '<div class="meta-left">'+
+      '<span class="meta-type-pill">'+escapeHtml(camp.type||'其他')+'</span>'+
+      '<span class="meta-name">'+escapeHtml(camp.name)+'</span>'+
+      '<span class="meta-period">'+periodText+'</span>'+
+    '</div>'+
+    '<div class="meta-actions">'+
+      '<button class="btn btn-light btn-sm" id="btnEditCampaign">編輯檔期</button>'+
+      '<button class="btn btn-danger btn-sm" id="btnDeleteCampaign">刪除檔期</button>'+
+    '</div>';
+  document.getElementById('btnEditCampaign').onclick = function(){ openCampaignModal(camp.id); };
+  document.getElementById('btnDeleteCampaign').onclick = function(){
+    var store = activeStore();
+    showConfirm('刪除檔期', '確定要刪除「'+camp.name+'」嗎？此檔期內共 '+camp.inquiries.length+' 筆詢問紀錄、'+camp.deposits.length+' 筆訂金訂單將一併刪除，且無法復原。', function(){
+      store.campaigns = store.campaigns.filter(function(c){return c.id!==camp.id;});
+      store.activeCampaignId = store.campaigns.length ? store.campaigns[0].id : null;
+      saveState(); renderAll();
+      toast('已刪除檔期');
+    });
+  };
+}
+
+function renderSubtabs(){
+  var camp = activeCampaign();
+  var row = document.getElementById('subtabRow');
+  var inqCount = camp ? camp.inquiries.length : 0;
+  var depCount = camp ? camp.deposits.length : 0;
+  row.innerHTML =
+    '<button class="subtab'+(activeView==='inquiry'?' active':'')+'" data-view="inquiry">客詢紀錄<span class="count">'+inqCount+'</span></button>'+
+    '<button class="subtab'+(activeView==='deposit'?' active':'')+'" data-view="deposit">訂金明細<span class="count">'+depCount+'</span></button>';
+  Array.prototype.forEach.call(row.querySelectorAll('.subtab'), function(btn){
+    btn.onclick = function(){
+      activeView = btn.getAttribute('data-view');
+      document.getElementById('viewInquiry').style.display = activeView==='inquiry' ? '' : 'none';
+      document.getElementById('viewDeposit').style.display = activeView==='deposit' ? '' : 'none';
+      renderAll();
+    };
+  });
+}
+
+/* ================= Render: Stats ================= */
+function getFilteredInquiries(){
+  var camp = activeCampaign();
+  if(!camp) return [];
+  var typeF = document.getElementById('filterType').value;
+  var salesF = document.getElementById('filterSales').value;
+  var dealF = document.getElementById('filterDeal').value;
+  var kw = document.getElementById('filterKeyword').value.trim().toLowerCase();
+  return camp.inquiries.filter(function(r){
+    if(typeF && r.customerType!==typeF) return false;
+    if(salesF && r.sales!==salesF) return false;
+    if(dealF==='purchased' && !r.purchased) return false;
+    if(dealF==='notified' && !(r.notified && !r.purchased)) return false;
+    if(dealF==='none' && (r.notified || r.purchased)) return false;
+    if(kw){
+      var hay = (r.product+' '+r.customerInfo+' '+r.email).toLowerCase();
+      if(hay.indexOf(kw)===-1) return false;
+    }
+    return true;
+  });
+}
+function getFilteredDeposits(){
+  var camp = activeCampaign();
+  if(!camp) return [];
+  var salesF = document.getElementById('filterDepSales').value;
+  var payF = document.getElementById('filterDepPayment').value;
+  var pickupF = document.getElementById('filterDepPickup').value;
+  var kw = document.getElementById('filterDepKeyword').value.trim().toLowerCase();
+  return camp.deposits.filter(function(d){
+    if(salesF && d.sales!==salesF) return false;
+    if(payF && d.paymentMethod!==payF) return false;
+    var hasPending = d.items.some(function(it){return it.status==='自取';});
+    if(pickupF==='pending' && !hasPending) return false;
+    if(pickupF==='done' && hasPending) return false;
+    if(kw){
+      var itemsText = d.items.map(function(i){return i.product;}).join(' ');
+      var hay = (d.orderNo+' '+itemsText+' '+d.customerName+' '+d.phone).toLowerCase();
+      if(hay.indexOf(kw)===-1) return false;
+    }
+    return true;
+  });
+}
+
+function renderStats(){
+  var camp = activeCampaign();
+  var grid = document.getElementById('statsGrid');
+  if(!camp){ grid.innerHTML=''; return; }
+
+  if(activeView==='inquiry'){
+    var recs = camp.inquiries;
+    var total = recs.reduce(function(s,r){return s+r.amount;},0);
+    var weighted = recs.reduce(function(s,r){return s + r.amount*((r.winRate||0)/100);},0);
+    var count = recs.length;
+    var avg = count ? total/count : 0;
+    var purchased = recs.filter(function(r){return r.purchased;});
+    var purchasedAmt = purchased.reduce(function(s,r){return s+r.amount;},0);
+    var convRate = count ? Math.round((purchased.length/count)*100) : 0;
+    grid.innerHTML =
+      statCard('詢問總金額','$'+fmtMoney(total),count+' 筆詢問') +
+      statCard('加權預估金額(依勝率)','$'+fmtMoney(Math.round(weighted)),'依各筆勝率折算') +
+      statCard('詢問筆數', count+' <small>筆</small>', '目前篩選：'+getFilteredInquiries().length+' 筆') +
+      statCard('平均單筆金額','$'+fmtMoney(Math.round(avg)),'') +
+      statCard('已成交','$'+fmtMoney(purchasedAmt), purchased.length+' 筆已購買') +
+      statCard('成交率', convRate+'<small>%</small>', '已購買 ／ 總詢問');
+  } else {
+    var deps = camp.deposits;
+    var dTotal = deps.reduce(function(s,d){return s+d.amount;},0);
+    var dCount = deps.length;
+    var pendingItems = 0, pendingQty = 0;
+    deps.forEach(function(d){
+      d.items.forEach(function(it){
+        if(it.status==='自取'){ pendingItems++; pendingQty += Number(it.qty)||0; }
+      });
+    });
+    var repCards = state.settings.salesReps.map(function(rep){
+      var repAmt = deps.filter(function(d){return d.sales===rep.name;}).reduce(function(s,d){return s+d.amount;},0);
+      var repCount = deps.filter(function(d){return d.sales===rep.name;}).length;
+      return statCard(rep.name+' 收訂', '$'+fmtMoney(repAmt), repCount+' 筆訂單', rep.color);
+    }).join('');
+    grid.innerHTML =
+      statCard('總訂金金額','$'+fmtMoney(dTotal),dCount+' 筆訂單') +
+      statCard('訂單數', dCount+' <small>筆</small>', '目前篩選：'+getFilteredDeposits().length+' 筆') +
+      statCard('待自取商品', pendingQty+' <small>件</small>', pendingItems+' 項待留貨') +
+      repCards;
+  }
+}
+function statCard(label,value,sub,accentColor){
+  var accent = accentColor ? 'border-top:3px solid '+accentColor+';' : '';
+  return '<div class="stat-card" style="'+accent+'"><div class="stat-label">'+label+'</div>'+
+    '<div class="stat-value num">'+value+'</div>'+
+    (sub?'<div class="stat-sub">'+sub+'</div>':'')+'</div>';
+}
+
+function renderBreakdown(){
+  var camp = activeCampaign();
+  var grid = document.getElementById('breakdownGrid');
+  if(!camp){ grid.innerHTML=''; return; }
+
+  function groupBy(list, keyFn, amtFn){
+    var map = {};
+    list.forEach(function(r){
+      var k = keyFn(r) || '（未填）';
+      if(!map[k]) map[k] = {count:0, amount:0};
+      map[k].count++; map[k].amount += amtFn(r);
+    });
+    return map;
+  }
+  function renderPanel(title, map, colorFn){
+    var entries = Object.keys(map).map(function(k){return {k:k, v:map[k]};});
+    entries.sort(function(a,b){return b.v.amount - a.v.amount;});
+    var maxAmt = entries.length ? entries[0].v.amount : 1;
+    var html = '<div class="panel"><h3>'+title+'</h3>';
+    if(!entries.length){ html += '<div class="footnote">尚無資料</div>'; }
+    entries.slice(0,6).forEach(function(e){
+      var pct = maxAmt ? Math.round((e.v.amount/maxAmt)*100) : 0;
+      var color = colorFn ? colorFn(e.k) : 'var(--blue-accent)';
+      html += '<div class="bar-row">'+
+        '<span class="bar-label" title="'+escapeHtml(e.k)+'">'+escapeHtml(e.k)+'</span>'+
+        '<span class="bar-track"><span class="bar-fill" style="width:'+pct+'%;background:'+color+'"></span></span>'+
+        '<span class="bar-val num">$'+fmtMoney(e.v.amount)+'</span>'+
+      '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+  function renderQtyPanel(title, map, colorFn, emptyMsg){
+    var entries = Object.keys(map).map(function(k){return {k:k, v:map[k]};});
+    entries.sort(function(a,b){return b.v.qty - a.v.qty;});
+    var maxQty = entries.length ? entries[0].v.qty : 1;
+    var html = '<div class="panel"><h3>'+title+'</h3>';
+    if(!entries.length){ html += '<div class="footnote">'+(emptyMsg||'尚無資料')+'</div>'; }
+    entries.slice(0,6).forEach(function(e){
+      var pct = maxQty ? Math.round((e.v.qty/maxQty)*100) : 0;
+      var color = colorFn ? colorFn(e.k) : 'var(--blue-accent)';
+      html += '<div class="bar-row">'+
+        '<span class="bar-label" title="'+escapeHtml(e.k)+'">'+escapeHtml(e.k)+'</span>'+
+        '<span class="bar-track"><span class="bar-fill" style="width:'+pct+'%;background:'+color+'"></span></span>'+
+        '<span class="bar-val num">'+e.v.qty+' 件</span>'+
+      '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  if(activeView==='inquiry'){
+    var recs = camp.inquiries;
+    var byType = groupBy(recs, function(r){return r.customerType;}, function(r){return r.amount;});
+    var bySales = groupBy(recs, function(r){return r.sales;}, function(r){return r.amount;});
+    var byProduct = groupBy(recs, function(r){return r.product;}, function(r){return r.amount;});
+    var byDeal = {
+      '已購買': {count:0, amount:0}, '已通知未購': {count:0, amount:0}, '尚未通知': {count:0, amount:0}
+    };
+    recs.forEach(function(r){
+      var k = r.purchased ? '已購買' : (r.notified ? '已通知未購' : '尚未通知');
+      byDeal[k].count++; byDeal[k].amount += r.amount;
+    });
+    grid.innerHTML =
+      renderPanel('依客人類型', byType) +
+      renderPanel('依業務', bySales, function(k){ return salesRepColor(k); }) +
+      renderPanel('熱門詢問商品 Top', byProduct) +
+      renderPanel('成交狀態', byDeal, function(k){
+        return k==='已購買' ? 'var(--green)' : (k==='已通知未購' ? 'var(--amber)' : '#9aa9b6');
+      });
+  } else {
+    var deps = camp.deposits;
+    var bySales2 = groupBy(deps, function(d){return d.sales;}, function(d){return d.amount;});
+    var byPayment = groupBy(deps, function(d){return d.paymentMethod;}, function(d){return d.amount;});
+    var byStatus = {'宅配':{qty:0}, '自取':{qty:0}, '已取':{qty:0}};
+    var byPendingProduct = {};
+    deps.forEach(function(d){
+      d.items.forEach(function(it){
+        var q = Number(it.qty)||0;
+        if(byStatus[it.status]) byStatus[it.status].qty += q;
+        if(it.status==='自取'){
+          if(!byPendingProduct[it.product]) byPendingProduct[it.product] = {qty:0};
+          byPendingProduct[it.product].qty += q;
+        }
+      });
+    });
+    grid.innerHTML =
+      renderPanel('依業務', bySales2, function(k){ return salesRepColor(k); }) +
+      renderPanel('依付款方式', byPayment) +
+      renderQtyPanel('配送狀態（依件數）', byStatus, function(k){
+        return k==='已取' ? 'var(--green)' : (k==='自取' ? 'var(--amber)' : 'var(--blue-accent)');
+      }) +
+      renderQtyPanel('待自取商品（協助留貨）', byPendingProduct, function(){ return 'var(--amber)'; }, '目前沒有待自取的商品');
+  }
+}
+
+/* ================= Render: Filters (option lists) ================= */
+function renderFilterOptions(){
+  var typeSel = document.getElementById('filterType');
+  var salesSel = document.getElementById('filterSales');
+  var curType = typeSel.value, curSales = salesSel.value;
+  typeSel.innerHTML = '<option value="">全部客人類型</option>' +
+    state.settings.customerTypes.map(function(t){return '<option value="'+escapeAttr(t)+'">'+escapeHtml(t)+'</option>';}).join('');
+  salesSel.innerHTML = '<option value="">全部業務</option>' +
+    state.settings.salesReps.map(function(s){return '<option value="'+escapeAttr(s.name)+'">'+escapeHtml(s.name)+'</option>';}).join('');
+  typeSel.value = curType; salesSel.value = curSales;
+
+  var depSalesSel = document.getElementById('filterDepSales');
+  var depPaySel = document.getElementById('filterDepPayment');
+  var curDepSales = depSalesSel.value, curDepPay = depPaySel.value;
+  depSalesSel.innerHTML = '<option value="">全部業務</option>' +
+    state.settings.salesReps.map(function(s){return '<option value="'+escapeAttr(s.name)+'">'+escapeHtml(s.name)+'</option>';}).join('');
+  depPaySel.innerHTML = '<option value="">全部付款方式</option>' +
+    state.settings.paymentMethods.map(function(p){return '<option value="'+escapeAttr(p)+'">'+escapeHtml(p)+'</option>';}).join('');
+  depSalesSel.value = curDepSales; depPaySel.value = curDepPay;
+}
+
+/* ================= Render: Inquiry Table ================= */
+function renderTableHead(headRowId, cols, sortState, onSort){
+  var row = document.getElementById(headRowId);
+  row.innerHTML = cols.map(function(c){
+    var arrow = '';
+    if(c.sortable && sortState.key===c.key){ arrow = '<span class="arrow">'+(sortState.dir==='asc'?'▲':'▼')+'</span>'; }
+    return '<th class="'+(c.sortable?'':'no-sort')+'" data-key="'+c.key+'" style="'+(c.width?'width:'+c.width+';':'')+(c.align?'text-align:'+c.align+';':'')+'">'+c.label+arrow+'</th>';
+  }).join('');
+  Array.prototype.forEach.call(row.querySelectorAll('th'), function(th){
+    var key = th.getAttribute('data-key');
+    var col = cols.find(function(c){return c.key===key;});
+    if(col && col.sortable){
+      th.onclick = function(){
+        if(sortState.key===key){ sortState.dir = sortState.dir==='asc'?'desc':'asc'; }
+        else { sortState.key = key; sortState.dir = 'asc'; }
+        onSort();
+      };
+    }
+  });
+}
+
+function renderInquiryTable(){
+  renderTableHead('tableHeadRowInquiry', INQUIRY_COLS, sortInquiry, renderInquiryTable);
+  var tbody = document.getElementById('tableBodyInquiry');
+  var recs = getFilteredInquiries();
+  document.getElementById('resultCountInquiry').textContent = recs.length + ' 筆';
+
+  recs = recs.slice().sort(function(a,b){
+    var k = sortInquiry.key, dir = sortInquiry.dir==='asc'?1:-1;
+    var av = a[k], bv = b[k];
+    if(k==='amount' || k==='winRate'){
+      av = av===null||av===undefined?-1:av; bv = bv===null||bv===undefined?-1:bv;
+      return (av-bv)*dir;
+    }
+    if(k==='notified' || k==='purchased'){ return ((a[k]?1:0)-(b[k]?1:0))*dir; }
+    av = (av||'').toString(); bv=(bv||'').toString();
+    return av.localeCompare(bv,'zh-Hant')*dir;
+  });
+
+  if(!recs.length){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="'+INQUIRY_COLS.length+'">目前沒有符合條件的詢問紀錄，點右上方「新增詢問紀錄」開始建立。</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = recs.map(function(r){
+    var color = salesRepColor(r.sales);
+    var wr = (r.winRate===null||r.winRate===undefined) ? '<span class="winrate-chip wr-none">—</span>' : '<span class="winrate-chip '+winRateClass(r.winRate)+'">'+r.winRate+'%</span>';
+    var hasNotes = !!(r.notes && r.notes.trim());
+    return '<tr data-id="'+r.id+'">'+
+      '<td>'+fmtDate(r.date)+'</td>'+
+      '<td>'+escapeHtml(r.product)+'</td>'+
+      '<td class="amount num">$'+fmtMoney(r.amount)+'</td>'+
+      '<td>'+escapeHtml(r.customerType||'—')+'</td>'+
+      '<td><span class="chip" style="background:'+color+';color:'+chipTextColor(color)+'">'+escapeHtml(r.sales||'—')+'</span></td>'+
+      '<td class="center">'+wr+'</td>'+
+      '<td class="center"><button class="bool-chip toggle-notified '+(r.notified?'on':'off')+'">'+(r.notified?'O':'X')+'</button></td>'+
+      '<td class="center"><button class="bool-chip toggle-purchased '+(r.purchased?'on':'off')+'">'+(r.purchased?'O':'X')+'</button></td>'+
+      '<td class="center"><button class="note-dot '+(hasNotes?'has':'none')+'" title="'+escapeAttr(hasNotes?r.notes:'（無備註，點擊新增）')+'"></button></td>'+
+      '<td>'+escapeHtml(r.customerInfo||'—')+'</td>'+
+      '<td>'+escapeHtml(r.email||'—')+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="icon-btn edit" title="編輯">✏️</button>'+
+        '<button class="icon-btn del" title="刪除">🗑️</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+
+  Array.prototype.forEach.call(tbody.querySelectorAll('tr'), function(tr){
+    var id = tr.getAttribute('data-id');
+    var camp = activeCampaign();
+    var rec = camp.inquiries.find(function(r){return r.id===id;});
+    tr.querySelector('.edit').onclick = function(){ openRecordModal(id); };
+    tr.querySelector('.note-dot').onclick = function(){ openRecordModal(id); };
+    tr.querySelector('.del').onclick = function(){
+      showConfirm('刪除紀錄', '確定要刪除「'+(rec?rec.product:'')+'」這筆詢問紀錄嗎？', function(){
+        camp.inquiries = camp.inquiries.filter(function(r){return r.id!==id;});
+        saveState(); renderAll();
+        toast('已刪除紀錄');
+      });
+    };
+    tr.querySelector('.toggle-notified').onclick = function(){
+      rec.notified = !rec.notified;
+      if(!rec.notified) rec.purchased = false;
+      saveState(); renderAll();
+    };
+    tr.querySelector('.toggle-purchased').onclick = function(){
+      rec.purchased = !rec.purchased;
+      if(rec.purchased) rec.notified = true;
+      saveState(); renderAll();
+    };
+  });
+}
+
+/* ================= Render: Deposit Table ================= */
+function renderDepositTable(){
+  renderTableHead('tableHeadRowDeposit', DEPOSIT_COLS, sortDeposit, renderDepositTable);
+  var tbody = document.getElementById('tableBodyDeposit');
+  var deps = getFilteredDeposits();
+  document.getElementById('resultCountDeposit').textContent = deps.length + ' 筆';
+
+  deps = deps.slice().sort(function(a,b){
+    var k = sortDeposit.key, dir = sortDeposit.dir==='asc'?1:-1;
+    var av = a[k], bv = b[k];
+    if(k==='amount'){ return ((av||0)-(bv||0))*dir; }
+    if(k==='voucher' || k==='member'){ return ((a[k]?1:0)-(b[k]?1:0))*dir; }
+    av = (av||'').toString(); bv=(bv||'').toString();
+    return av.localeCompare(bv,'zh-Hant')*dir;
+  });
+
+  if(!deps.length){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="'+DEPOSIT_COLS.length+'">目前沒有符合條件的訂金訂單，點右上方「新增訂金訂單」開始建立。</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = deps.map(function(d){
+    var color = salesRepColor(d.sales);
+    var itemsHtml = d.items.length
+      ? d.items.map(function(i){
+          return '<span class="item-line">'+escapeHtml(i.product)+'\u00A0<b>×'+i.qty+'</b>\u00A0'+
+            '<button class="status-tag tag-'+statusClass(i.status)+'" data-item-id="'+i.id+'">'+i.status+'</button></span>';
+        }).join('')
+      : '—';
+    return '<tr data-id="'+d.id+'">'+
+      '<td>'+fmtDate(d.date)+'</td>'+
+      '<td>'+escapeHtml(d.orderNo||'—')+'</td>'+
+      '<td class="items-list" style="white-space:normal;max-width:320px;">'+itemsHtml+'</td>'+
+      '<td class="amount num">$'+fmtMoney(d.amount)+'</td>'+
+      '<td>'+escapeHtml(d.paymentMethod||'—')+'</td>'+
+      '<td class="center"><button class="bool-chip toggle-voucher '+(d.voucher?'on':'off')+'">'+(d.voucher?'O':'X')+'</button></td>'+
+      '<td class="center"><button class="bool-chip toggle-member '+(d.member?'on':'off')+'">'+(d.member?'O':'X')+'</button></td>'+
+      '<td><span class="chip" style="background:'+color+';color:'+chipTextColor(color)+'">'+escapeHtml(d.sales||'—')+'</span></td>'+
+      '<td>'+escapeHtml(d.customerName||'—')+'</td>'+
+      '<td>'+escapeHtml(d.phone||'—')+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="icon-btn edit" title="編輯">✏️</button>'+
+        '<button class="icon-btn del" title="刪除">🗑️</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+
+  Array.prototype.forEach.call(tbody.querySelectorAll('tr'), function(tr){
+    var id = tr.getAttribute('data-id');
+    var camp = activeCampaign();
+    var dep = camp.deposits.find(function(d){return d.id===id;});
+    tr.querySelector('.edit').onclick = function(){ openDepositModal(id); };
+    tr.querySelector('.del').onclick = function(){
+      showConfirm('刪除訂單', '確定要刪除訂單「'+(dep?dep.orderNo||'（無編號）':'')+'」嗎？', function(){
+        camp.deposits = camp.deposits.filter(function(d){return d.id!==id;});
+        saveState(); renderAll();
+        toast('已刪除訂單');
+      });
+    };
+    tr.querySelector('.toggle-member').onclick = function(){
+      dep.member = !dep.member; saveState(); renderAll();
+    };
+    tr.querySelector('.toggle-voucher').onclick = function(){
+      var newVal = !dep.voucher;
+      showConfirm(
+        '變更兌換券狀態',
+        '訂單「'+(dep.orderNo||'（無編號）')+'」／'+(dep.customerName||'客人')+'，確定要將兌換券狀態改為「'+(newVal?'已兌換':'未兌換')+'」嗎？這會影響客人權益，請確認無誤。',
+        function(){ dep.voucher = newVal; saveState(); renderAll(); },
+        {okLabel:'確認變更', okClass:'btn-primary'}
+      );
+    };
+    Array.prototype.forEach.call(tr.querySelectorAll('.status-tag'), function(btn){
+      btn.onclick = function(){
+        var itemId = btn.getAttribute('data-item-id');
+        var item = dep.items.find(function(it){return it.id===itemId;});
+        if(!item) return;
+        var nextStatus = ITEM_STATUS_OPTIONS[(ITEM_STATUS_OPTIONS.indexOf(item.status)+1) % ITEM_STATUS_OPTIONS.length];
+        showConfirm(
+          '變更商品配送狀態',
+          '「'+item.product+'」目前為「'+item.status+'」，確定要改為「'+nextStatus+'」嗎？這會影響客人權益，請確認無誤。',
+          function(){ item.status = nextStatus; saveState(); renderAll(); },
+          {okLabel:'確認變更', okClass:'btn-primary'}
+        );
+      };
+    });
+  });
+}
+
+/* ================= Render: All ================= */
+function renderAll(){
+  renderStoreTabs();
+  renderTabs();
+  renderMeta();
+  renderSubtabs();
+  renderFilterOptions();
+  renderStats();
+  renderBreakdown();
+  if(activeView==='inquiry'){ renderInquiryTable(); } else { renderDepositTable(); }
+  syncTableHeaderOffset();
+}
+
+function syncTableHeaderOffset(){
+  var bar = (activeView==='inquiry')
+    ? document.querySelector('#viewInquiry .filter-bar')
+    : document.querySelector('#viewDeposit .filter-bar');
+  var h = bar ? Math.ceil(bar.getBoundingClientRect().height) : 0;
+  document.documentElement.style.setProperty('--thead-top', h+'px');
+}
+
+/* ================= Confirm Modal ================= */
+function showConfirm(title, msg, cb, opts){
+  opts = opts || {};
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent = msg;
+  var okBtn = document.getElementById('btnConfirmOk');
+  okBtn.textContent = opts.okLabel || '確認刪除';
+  okBtn.className = 'btn btn-sm ' + (opts.okClass || 'btn-danger');
+  confirmCallback = cb;
+  openOverlay('overlayConfirm');
+}
+document.getElementById('btnConfirmOk').onclick = function(){
+  closeOverlay('overlayConfirm');
+  if(confirmCallback){ confirmCallback(); confirmCallback=null; }
+};
+
+/* ================= Campaign Modal ================= */
+function openCampaignModal(id){
+  editingCampaignId = id;
+  var typeGrid = document.getElementById('campaignTypeGrid');
+  var selectedType = '周年慶';
+  if(id){
+    var camp = activeStore().campaigns.find(function(c){return c.id===id;});
+    document.getElementById('campaignModalTitle').textContent = '編輯檔期';
+    document.getElementById('campaignNameInput').value = camp.name;
+    document.getElementById('campaignStartInput').value = camp.start||'';
+    document.getElementById('campaignEndInput').value = camp.end||'';
+    selectedType = camp.type || '周年慶';
+  } else {
+    document.getElementById('campaignModalTitle').textContent = '新增檔期';
+    document.getElementById('campaignNameInput').value = '';
+    document.getElementById('campaignStartInput').value = '';
+    document.getElementById('campaignEndInput').value = '';
+  }
+  typeGrid.innerHTML = CAMPAIGN_TYPES.map(function(t){
+    return '<div class="type-opt'+(t===selectedType?' selected':'')+'" data-type="'+escapeAttr(t)+'">'+t+'</div>';
+  }).join('');
+  Array.prototype.forEach.call(typeGrid.querySelectorAll('.type-opt'), function(el){
+    el.onclick = function(){
+      Array.prototype.forEach.call(typeGrid.querySelectorAll('.type-opt'), function(x){x.classList.remove('selected');});
+      el.classList.add('selected');
+    };
+  });
+  openOverlay('overlayCampaign');
+}
+document.getElementById('btnSaveCampaign').onclick = function(){
+  var name = document.getElementById('campaignNameInput').value.trim();
+  if(!name){ toast('請輸入檔期名稱'); return; }
+  var typeEl = document.querySelector('#campaignTypeGrid .type-opt.selected');
+  var type = typeEl ? typeEl.getAttribute('data-type') : '其他';
+  var start = document.getElementById('campaignStartInput').value;
+  var end = document.getElementById('campaignEndInput').value;
+  var store = activeStore();
+  if(!store){ toast('請先選擇門市'); return; }
+
+  if(editingCampaignId){
+    var camp = store.campaigns.find(function(c){return c.id===editingCampaignId;});
+    camp.name = name; camp.type = type; camp.start = start; camp.end = end;
+    toast('已更新檔期');
+  } else {
+    var newCamp = {id: uid(), name:name, type:type, start:start, end:end, inquiries:[], deposits:[]};
+    store.campaigns.push(newCamp);
+    store.activeCampaignId = newCamp.id;
+    toast('已新增檔期');
+  }
+  saveState();
+  closeOverlay('overlayCampaign');
+  renderAll();
+};
+
+document.getElementById('btnAddStore').onclick = function(){
+  document.getElementById('storeNameInput').value = '';
+  openOverlay('overlayStore');
+};
+document.getElementById('btnSaveStore').onclick = function(){
+  var name = document.getElementById('storeNameInput').value.trim();
+  if(!name){ toast('請輸入門市名稱'); return; }
+  var st = newStore(name);
+  state.stores.push(st);
+  state.activeStoreId = st.id;
+  saveState();
+  closeOverlay('overlayStore');
+  renderAll();
+  toast('已新增門市');
+};
+
+/* ================= Record Modal (Inquiry) ================= */
+function fillSelect(sel, options, selected){
+  sel.innerHTML = options.map(function(o){
+    var val = typeof o==='string' ? o : o.name;
+    return '<option value="'+escapeAttr(val)+'">'+escapeHtml(val)+'</option>';
+  }).join('');
+  if(selected) sel.value = selected;
+}
+function openRecordModal(id){
+  editingRecordId = id;
+  fillSelect(document.getElementById('rCustomerType'), state.settings.customerTypes);
+  fillSelect(document.getElementById('rSales'), state.settings.salesReps);
+  var camp = activeCampaign();
+  if(id){
+    var rec = camp.inquiries.find(function(r){return r.id===id;});
+    document.getElementById('recordModalTitle').textContent = '編輯詢問紀錄';
+    document.getElementById('rDate').value = rec.date||'';
+    document.getElementById('rAmount').value = rec.amount||'';
+    document.getElementById('rProduct').value = rec.product||'';
+    document.getElementById('rCustomerType').value = rec.customerType||'';
+    document.getElementById('rSales').value = rec.sales||'';
+    document.getElementById('rWinRate').value = (rec.winRate===null||rec.winRate===undefined)?'':rec.winRate;
+    document.getElementById('rCustomerInfo').value = rec.customerInfo||'';
+    document.getElementById('rEmail').value = rec.email||'';
+    document.getElementById('rNotified').checked = !!rec.notified;
+    document.getElementById('rPurchased').checked = !!rec.purchased;
+    document.getElementById('rNotes').value = rec.notes||'';
+  } else {
+    document.getElementById('recordModalTitle').textContent = '新增詢問紀錄';
+    document.getElementById('rDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('rAmount').value = '';
+    document.getElementById('rProduct').value = '';
+    document.getElementById('rWinRate').value = '';
+    document.getElementById('rCustomerInfo').value = '';
+    document.getElementById('rEmail').value = '';
+    document.getElementById('rNotified').checked = false;
+    document.getElementById('rPurchased').checked = false;
+    document.getElementById('rNotes').value = '';
+  }
+  openOverlay('overlayRecord');
+}
+document.getElementById('btnSaveRecord').onclick = function(){
+  var product = document.getElementById('rProduct').value.trim();
+  if(!product){ toast('請輸入詢問商品'); return; }
+  var camp = activeCampaign();
+  if(!camp){ toast('請先建立檔期'); return; }
+  var purchased = document.getElementById('rPurchased').checked;
+  var notified = document.getElementById('rNotified').checked || purchased;
+  var data = {
+    date: document.getElementById('rDate').value,
+    product: product,
+    amount: Number(document.getElementById('rAmount').value)||0,
+    customerType: document.getElementById('rCustomerType').value,
+    sales: document.getElementById('rSales').value,
+    winRate: document.getElementById('rWinRate').value===''? null : Number(document.getElementById('rWinRate').value),
+    customerInfo: document.getElementById('rCustomerInfo').value.trim(),
+    email: document.getElementById('rEmail').value.trim(),
+    notified: notified,
+    purchased: purchased,
+    notes: document.getElementById('rNotes').value.trim()
+  };
+  if(editingRecordId){
+    var rec = camp.inquiries.find(function(r){return r.id===editingRecordId;});
+    Object.assign(rec, data);
+    toast('已更新紀錄');
+  } else {
+    data.id = uid();
+    camp.inquiries.push(data);
+    toast('已新增紀錄');
+  }
+  saveState();
+  closeOverlay('overlayRecord');
+  renderAll();
+};
+
+/* ================= Deposit Modal ================= */
+function addDepositItemRow(product, qty, status){
+  var container = document.getElementById('depositItemsContainer');
+  var rowId = 'item_' + (depositItemCounter++);
+  var row = document.createElement('div');
+  row.className = 'item-row';
+  row.setAttribute('data-row-id', rowId);
+  var statusOpts = ITEM_STATUS_OPTIONS.map(function(s){
+    return '<option value="'+s+'"'+(s===(status||'自取')?' selected':'')+'>'+s+'</option>';
+  }).join('');
+  row.innerHTML =
+    '<input type="text" class="item-product" placeholder="商品名稱" value="'+escapeAttr(product||'')+'">'+
+    '<input type="number" class="item-qty" placeholder="數量" value="'+(qty||1)+'" min="1">'+
+    '<select class="item-status">'+statusOpts+'</select>'+
+    '<button type="button" class="item-remove">✕</button>';
+  row.querySelector('.item-remove').onclick = function(){ container.removeChild(row); };
+  container.appendChild(row);
+}
+function openDepositModal(id){
+  editingDepositId = id;
+  fillSelect(document.getElementById('dSales'), state.settings.salesReps);
+  fillSelect(document.getElementById('dPayment'), state.settings.paymentMethods);
+  var container = document.getElementById('depositItemsContainer');
+  container.innerHTML = '';
+  var camp = activeCampaign();
+  if(id){
+    var dep = camp.deposits.find(function(d){return d.id===id;});
+    document.getElementById('depositModalTitle').textContent = '編輯訂金訂單';
+    document.getElementById('dDate').value = dep.date||'';
+    document.getElementById('dOrderNo').value = dep.orderNo||'';
+    document.getElementById('dAmount').value = dep.amount||'';
+    document.getElementById('dPayment').value = dep.paymentMethod||'';
+    document.getElementById('dSales').value = dep.sales||'';
+    document.getElementById('dPhone').value = dep.phone||'';
+    document.getElementById('dCustomerName').value = dep.customerName||'';
+    document.getElementById('dVoucher').checked = !!dep.voucher;
+    document.getElementById('dMember').checked = !!dep.member;
+    if(dep.items.length){
+      dep.items.forEach(function(it){ addDepositItemRow(it.product, it.qty, it.status); });
+    } else {
+      addDepositItemRow('',1,'自取');
+    }
+  } else {
+    document.getElementById('depositModalTitle').textContent = '新增訂金訂單';
+    document.getElementById('dDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('dOrderNo').value = '';
+    document.getElementById('dAmount').value = '';
+    document.getElementById('dPhone').value = '';
+    document.getElementById('dCustomerName').value = '';
+    document.getElementById('dVoucher').checked = false;
+    document.getElementById('dMember').checked = false;
+    addDepositItemRow('',1,'自取');
+  }
+  openOverlay('overlayDeposit');
+}
+document.getElementById('btnAddItemRow').onclick = function(){ addDepositItemRow('',1,'自取'); };
+document.getElementById('btnSaveDeposit').onclick = function(){
+  var camp = activeCampaign();
+  if(!camp){ toast('請先建立檔期'); return; }
+  var container = document.getElementById('depositItemsContainer');
+  var items = [];
+  Array.prototype.forEach.call(container.querySelectorAll('.item-row'), function(row){
+    var product = row.querySelector('.item-product').value.trim();
+    var qty = Number(row.querySelector('.item-qty').value) || 1;
+    var status = row.querySelector('.item-status').value;
+    if(product) items.push({id:uid(), product:product, qty:qty, status:status});
+  });
+  if(!items.length){ toast('請至少輸入一項商品'); return; }
+  var data = {
+    date: document.getElementById('dDate').value,
+    orderNo: document.getElementById('dOrderNo').value.trim(),
+    amount: Number(document.getElementById('dAmount').value)||0,
+    paymentMethod: document.getElementById('dPayment').value,
+    sales: document.getElementById('dSales').value,
+    phone: document.getElementById('dPhone').value.trim(),
+    customerName: document.getElementById('dCustomerName').value.trim(),
+    voucher: document.getElementById('dVoucher').checked,
+    member: document.getElementById('dMember').checked,
+    items: items
+  };
+  if(editingDepositId){
+    var dep = camp.deposits.find(function(d){return d.id===editingDepositId;});
+    Object.assign(dep, data);
+    toast('已更新訂單');
+  } else {
+    data.id = uid();
+    camp.deposits.push(data);
+    toast('已新增訂單');
+  }
+  saveState();
+  closeOverlay('overlayDeposit');
+  renderAll();
+};
+
+/* ================= Settings Modal ================= */
+function renderSettingsLists(){
+  var ctList = document.getElementById('customerTypeList');
+  ctList.innerHTML = state.settings.customerTypes.map(function(t,i){
+    return '<div class="opt-item" data-idx="'+i+'">'+
+      '<input type="text" value="'+escapeAttr(t)+'">'+
+      '<button class="icon-btn del" title="刪除">🗑️</button>'+
+    '</div>';
+  }).join('');
+  Array.prototype.forEach.call(ctList.querySelectorAll('.opt-item'), function(item){
+    var idx = Number(item.getAttribute('data-idx'));
+    item.querySelector('input').onchange = function(e){
+      state.settings.customerTypes[idx] = e.target.value.trim() || state.settings.customerTypes[idx];
+      saveState(); renderAll();
+    };
+    item.querySelector('.del').onclick = function(){
+      state.settings.customerTypes.splice(idx,1);
+      saveState(); renderSettingsLists(); renderAll();
+    };
+  });
+
+  var slList = document.getElementById('salesList');
+  slList.innerHTML = state.settings.salesReps.map(function(s,i){
+    return '<div class="opt-item" data-idx="'+i+'">'+
+      '<span class="swatch" style="background:'+s.color+'"></span>'+
+      '<input type="text" value="'+escapeAttr(s.name)+'">'+
+      '<button class="icon-btn del" title="刪除">🗑️</button>'+
+    '</div>';
+  }).join('');
+  Array.prototype.forEach.call(slList.querySelectorAll('.opt-item'), function(item){
+    var idx = Number(item.getAttribute('data-idx'));
+    item.querySelector('input').onchange = function(e){
+      state.settings.salesReps[idx].name = e.target.value.trim() || state.settings.salesReps[idx].name;
+      saveState(); renderAll();
+    };
+    item.querySelector('.del').onclick = function(){
+      state.settings.salesReps.splice(idx,1);
+      saveState(); renderSettingsLists(); renderAll();
+    };
+    var swatch = item.querySelector('.swatch');
+    swatch.onclick = function(ev){
+      var existing = document.querySelector('.color-pop');
+      if(existing) existing.remove();
+      var pop = document.createElement('div');
+      pop.className = 'color-pop';
+      COLOR_PALETTE.forEach(function(c){
+        var s = document.createElement('span');
+        s.style.background = c;
+        if(c===state.settings.salesReps[idx].color) s.className='on';
+        s.onclick = function(){
+          state.settings.salesReps[idx].color = c;
+          saveState(); renderSettingsLists(); renderAll();
+          pop.remove();
+        };
+        pop.appendChild(s);
+      });
+      item.appendChild(pop);
+      ev.stopPropagation();
+      setTimeout(function(){
+        document.addEventListener('click', function h(){ pop.remove(); document.removeEventListener('click',h); });
+      },0);
+    };
+  });
+
+  var pmList = document.getElementById('paymentList');
+  pmList.innerHTML = state.settings.paymentMethods.map(function(p,i){
+    return '<div class="opt-item" data-idx="'+i+'">'+
+      '<input type="text" value="'+escapeAttr(p)+'">'+
+      '<button class="icon-btn del" title="刪除">🗑️</button>'+
+    '</div>';
+  }).join('');
+  Array.prototype.forEach.call(pmList.querySelectorAll('.opt-item'), function(item){
+    var idx = Number(item.getAttribute('data-idx'));
+    item.querySelector('input').onchange = function(e){
+      state.settings.paymentMethods[idx] = e.target.value.trim() || state.settings.paymentMethods[idx];
+      saveState(); renderAll();
+    };
+    item.querySelector('.del').onclick = function(){
+      state.settings.paymentMethods.splice(idx,1);
+      saveState(); renderSettingsLists(); renderAll();
+    };
+  });
+}
+document.getElementById('btnAddCustomerType').onclick = function(){
+  state.settings.customerTypes.push('新類型');
+  saveState(); renderSettingsLists(); renderAll();
+};
+document.getElementById('btnAddSales').onclick = function(){
+  var color = COLOR_PALETTE[state.settings.salesReps.length % COLOR_PALETTE.length];
+  state.settings.salesReps.push({id:uid(), name:'新業務', color:color});
+  saveState(); renderSettingsLists(); renderAll();
+};
+document.getElementById('btnAddPayment').onclick = function(){
+  state.settings.paymentMethods.push('新付款方式');
+  saveState(); renderSettingsLists(); renderAll();
+};
+
+/* ================= CSV / JSON Export ================= */
+function downloadCsv(filename, headers, rows){
+  var lines = [headers.join(',')];
+  rows.forEach(function(row){
+    var cells = row.map(function(v){
+      v = (v===null||v===undefined) ? '' : String(v);
+      if(/[",\n]/.test(v)) v = '"'+v.replace(/"/g,'""')+'"';
+      return v;
+    });
+    lines.push(cells.join(','));
+  });
+  var csv = '\uFEFF' + lines.join('\r\n');
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('已匯出 CSV');
+}
+function exportInquiryCsv(){
+  var camp = activeCampaign();
+  if(!camp){ toast('沒有可匯出的檔期'); return; }
+  var headers = ['日期','詢問商品','當下金額','客人類型','業務','勝率%','已通知','已購買','備註','客人資料','Email'];
+  var rows = getFilteredInquiries().map(function(r){
+    return [r.date, r.product, r.amount, r.customerType, r.sales,
+      (r.winRate===null||r.winRate===undefined)?'':r.winRate+'%',
+      r.notified?'O':'X', r.purchased?'O':'X', r.notes||'', r.customerInfo, r.email];
+  });
+  downloadCsv(camp.name + '_客詢紀錄.csv', headers, rows);
+}
+function exportDepositCsv(){
+  var camp = activeCampaign();
+  if(!camp){ toast('沒有可匯出的檔期'); return; }
+  var headers = ['付訂日期','訂單編號','商品','付訂金額','付款方式','兌換券','Beutii會員','業務','客人姓名','電話'];
+  var rows = getFilteredDeposits().map(function(d){
+    var itemsText = d.items.map(function(i){return i.product+'×'+i.qty+'['+i.status+']';}).join('；');
+    return [d.date, d.orderNo, itemsText, d.amount, d.paymentMethod, d.voucher?'O':'X', d.member?'O':'X', d.sales, d.customerName, d.phone];
+  });
+  downloadCsv(camp.name + '_訂金明細.csv', headers, rows);
+}
+function exportJson(){
+  var blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '客詢紀錄備份_' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('已匯出備份');
+}
+function importJson(file){
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var parsed = migrate(JSON.parse(e.target.result));
+      if(!parsed || !Array.isArray(parsed.stores)){ throw new Error('格式不正確'); }
+      showConfirm('匯入備份', '匯入後將完全取代目前系統內的所有門市、檔期與紀錄，確定要繼續嗎？建議先匯出目前資料備份。', function(){
+        state = parsed;
+        saveState(); renderAll();
+        toast('已匯入備份');
+      });
+    }catch(err){
+      toast('匯入失敗：檔案格式不正確');
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ================= Bindings ================= */
+document.getElementById('btnAddRecord').onclick = function(){ openRecordModal(null); };
+document.getElementById('btnAddDeposit').onclick = function(){ openDepositModal(null); };
+document.getElementById('btnExportCsvInquiry').onclick = exportInquiryCsv;
+document.getElementById('btnExportCsvDeposit').onclick = exportDepositCsv;
+document.getElementById('btnExportJson').onclick = exportJson;
+document.getElementById('btnImportJson').onclick = function(){ document.getElementById('fileImport').click(); };
+document.getElementById('fileImport').onchange = function(e){
+  if(e.target.files[0]) importJson(e.target.files[0]);
+  e.target.value = '';
+};
+document.getElementById('btnSettings').onclick = function(){ renderSettingsLists(); openOverlay('overlaySettings'); };
+
+document.getElementById('filterType').onchange = renderAll;
+document.getElementById('filterSales').onchange = renderAll;
+document.getElementById('filterDeal').onchange = renderAll;
+document.getElementById('filterKeyword').oninput = debounce(renderAll, 200);
+document.getElementById('filterDepSales').onchange = renderAll;
+document.getElementById('filterDepPayment').onchange = renderAll;
+document.getElementById('filterDepPickup').onchange = renderAll;
+document.getElementById('filterDepKeyword').oninput = debounce(renderAll, 200);
+
+Array.prototype.forEach.call(document.querySelectorAll('[data-close]'), function(el){
+  el.onclick = function(){ closeOverlay(el.getAttribute('data-close')); };
+});
+Array.prototype.forEach.call(document.querySelectorAll('.overlay'), function(ov){
+  ov.addEventListener('mousedown', function(e){ if(e.target===ov) closeOverlay(ov.id); });
+});
+
+/* ================= Init (Firebase-backed) ================= */
+function setConnStatus(connected){
+  var el = document.getElementById('connStatus');
+  if(!el) return;
+  el.textContent = connected ? '🟢 已連線' : '🔴 連線中斷（使用本機資料）';
+  el.className = 'conn-status ' + (connected ? 'on' : 'off');
+}
+
+function startApp(){
+  window.FB.subscribe(function(remoteData){
+    if(remoteData){
+      state = migrate(JSON.parse(JSON.stringify(remoteData))) || seedData();
+    } else {
+      // Firestore 上還沒有資料：第一次啟用，接續本機舊資料（沒有的話用範例資料）並上傳
+      state = loadStateLocalFallback();
+      window.FB.save(state);
+    }
+    renderAll();
+    setConnStatus(true);
+  }, function(){
+    setConnStatus(false);
+    if(!state){
+      state = loadStateLocalFallback();
+      renderAll();
+    }
+  });
+  window.addEventListener('resize', debounce(syncTableHeaderOffset, 150));
+}
+
+if(window.FB){ startApp(); } else { window.addEventListener('fb-sdk-ready', startApp); }
+
+})();
+</script>
+</body>
+</html>
