@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>寄倉費試算 · Beutii</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF0EC;
+    --card:#FBFBF9;
+    --ink:#1B201C;
+    --ink-soft:#5C645B;
+    --line:#DCDFD8;
+    --pine:#33594E;
+    --pine-soft:#E4ECE7;
+    --clay:#B4541E;
+    --clay-soft:#F6E7DC;
+    --ok:#33594E;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:"Noto Sans TC",system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.65;
+    padding:36px 20px 64px;
+    display:flex;
+    justify-content:center;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{width:100%;max-width:540px}
+  .num{font-variant-numeric:tabular-nums;letter-spacing:.01em}
+
+  /* Header */
+  .eyebrow{
+    font-size:11.5px;letter-spacing:.34em;text-transform:uppercase;
+    color:var(--pine);font-weight:700;margin-bottom:14px;
+  }
+  h1{
+    font-size:29px;font-weight:900;letter-spacing:.04em;line-height:1.25;
+    margin-bottom:9px;
+  }
+  .sub{color:var(--ink-soft);font-size:14px;margin-bottom:28px;line-height:1.7}
+
+  /* Note for sales */
+  .note{
+    background:var(--clay-soft);
+    border:1px solid #EAD2BF;
+    border-radius:14px;
+    padding:15px 17px;
+    display:flex;gap:12px;align-items:flex-start;
+    margin-bottom:24px;
+  }
+  .note .tag{
+    flex:none;font-size:11px;font-weight:700;letter-spacing:.08em;
+    background:var(--clay);color:#fff;padding:4px 10px;border-radius:999px;
+    margin-top:1px;
+  }
+  .note p{font-size:13.5px;color:#6E3415;font-weight:500;line-height:1.75}
+  .note b{font-weight:700}
+
+  /* Form card */
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:22px 20px;
+    margin-bottom:20px;
+  }
+  .field{margin-bottom:17px}
+  .field:last-child{margin-bottom:0}
+  label{
+    display:block;font-size:13px;font-weight:700;color:var(--ink);
+    margin-bottom:8px;letter-spacing:.02em;
+  }
+  label .hint{font-weight:400;color:var(--ink-soft);font-size:11.5px;margin-left:6px}
+  input[type=date],input[type=number]{
+    width:100%;font-family:inherit;font-size:15px;font-weight:500;
+    font-variant-numeric:tabular-nums;
+    padding:11px 13px;border:1px solid var(--line);border-radius:10px;
+    background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s;
+  }
+  input:focus{outline:none;border-color:var(--pine);box-shadow:0 0 0 3px var(--pine-soft)}
+
+  .derived{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--pine-soft);border-radius:10px;padding:11px 14px;
+  }
+  .derived .k{font-size:13px;font-weight:700;color:var(--pine)}
+  .derived .v{font-size:15px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  .derived .v.empty{color:var(--ink-soft);font-weight:400}
+
+  /* Timeline signature */
+  .timeline{margin:4px 0 22px;display:none}
+  .timeline.show{display:block}
+  .bar{
+    position:relative;height:11px;border-radius:999px;overflow:hidden;
+    background:var(--line);display:flex;
+  }
+  .seg-free{background:var(--pine)}
+  .seg-over{background:var(--clay)}
+  .ticks{position:relative;height:48px;margin-top:9px}
+  .tick{position:absolute;transform:translateX(-50%);text-align:center;width:90px}
+  .tick .dot{width:7px;height:7px;border-radius:50%;background:var(--ink);margin:0 auto 5px}
+  .tick.over .dot{background:var(--clay)}
+  .tick .lbl{font-size:10.5px;color:var(--ink-soft);font-weight:500;line-height:1.3}
+  .tick .dt{font-size:11px;color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
+
+  /* Result */
+  .result{
+    background:var(--ink);color:#fff;border-radius:18px;padding:26px 24px;
+  }
+  .result .status{
+    font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;
+    font-weight:700;margin-bottom:14px;color:#A9C3B8;
+  }
+  .result.fee .status{color:#E9B690}
+  .result .amount{
+    font-size:48px;font-weight:900;font-variant-numeric:tabular-nums;
+    line-height:1;margin-bottom:15px;letter-spacing:-.005em;
+  }
+  .result .amount small{font-size:24px;font-weight:500;opacity:.55;margin-right:5px}
+  .breakdown{font-size:13.5px;color:#C7CEC8;line-height:1.8}
+  .breakdown b{color:#fff;font-weight:700;font-variant-numeric:tabular-nums}
+  .result .err{font-size:14px;color:#F0B9A0;font-weight:500}
+
+  /* Eligibility chip */
+  .elig{margin-top:15px;font-size:13px;font-weight:700;line-height:1.6;display:none}
+  .elig.show{display:block}
+  .result .elig.ok{color:#9FD4BE}
+  .result .elig.no{color:#F0A98D}
+
+  .foot{margin-top:22px;font-size:11.5px;color:var(--ink-soft);line-height:1.8}
+  .foot b{color:var(--ink);font-weight:700}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media (max-width:480px){h1{font-size:26px}.result .amount{font-size:40px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Beutii · 寄倉費試算</div>
+  <h1>寄倉費用試算</h1>
+  <p class="sub">確認免費寄倉資格,並計算超過免費期後的寄倉費用。</p>
+
+  <div class="note">
+    <span class="tag">業務確認</span>
+    <p>訂單滿 <b>$15,000</b>:享 90 天免費寄倉,超過後每月 $500。<br>未滿 <b>$15,000</b>:無免費期,自購買日起每月酌收 <b>$500</b>。</p>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label for="buy">1 · 購買日期</label>
+      <input type="date" id="buy">
+    </div>
+
+    <div class="field">
+      <label>2 · 免費寄倉截止日 <span class="hint">購買日 + 90 天 · 自動計算</span></label>
+      <div class="derived">
+        <span class="k">免費寄倉至</span>
+        <span class="v empty" id="deadline">—</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="ship">3 · 出貨日期</label>
+      <input type="date" id="ship">
+    </div>
+
+    <div class="field">
+      <label for="amount">訂單金額 <span class="hint">選填 · 用於判定免費寄倉資格</span></label>
+      <input type="number" id="amount" inputmode="numeric" placeholder="例如 15000" min="0" step="1">
+    </div>
+  </div>
+
+  <div class="timeline" id="timeline">
+    <div class="bar" id="bar"></div>
+    <div class="ticks" id="ticks"></div>
+  </div>
+
+  <div class="result" id="result">
+    <div class="status" id="status">4 · 寄倉費</div>
+    <div class="amount" id="amount-out"><small>$</small>0</div>
+    <div class="breakdown" id="breakdown">填入購買日期與出貨日期即可試算。</div>
+    <div class="elig" id="elig"></div>
+  </div>
+
+  <p class="foot">
+    <b>計算規則</b>：滿 $15,000 享 90 天免費,超過部分計費;未滿 $15,000 自購買日起計費。
+    一律以每滿 30 天計一個月,不足一個月以一個月計,每月 $500。
+  </p>
+</div>
+
+<script>
+(function(){
+  const FREE_DAYS = 90, MONTH_DAYS = 30, FEE_PER_MONTH = 500, MIN_ORDER = 15000;
+  const DAY = 86400000;
+  const $ = id => document.getElementById(id);
+  const buy=$('buy'), ship=$('ship'), amount=$('amount');
+
+  const pad = n => String(n).padStart(2,'0');
+  const fmt = d => `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
+  const addDays = (d,n) => { const x=new Date(d.getTime()); x.setDate(x.getDate()+n); return x; };
+  const parse = el => { const v=el.value; if(!v) return null; const p=v.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); };
+  const money = n => n.toLocaleString('en-US');
+  const getAmount = () => { const v=amount.value.trim(); return v==='' ? null : Number(v); };
+
+  let last = { ready:false };
+
+  function render(){
+    const b = parse(buy), s = parse(ship);
+    const amt = getAmount();
+    const known = amt !== null;
+    const qualifies = !known || amt >= MIN_ORDER;   // 空白時預設以「符合」計算
+    const deadline = b ? addDays(b, FREE_DAYS) : null;
+
+    // 免費寄倉截止日顯示
+    const dl = $('deadline');
+    if(!b){ dl.textContent='—'; dl.className='v empty'; }
+    else if(known && !qualifies){ dl.textContent='不適用'; dl.className='v empty'; }
+    else { dl.textContent=fmt(deadline); dl.className='v'; }
+
+    const result=$('result'), status=$('status'), out=$('amount-out'), bd=$('breakdown');
+
+    if(!b || !s){
+      result.classList.remove('fee');
+      status.textContent='4 · 寄倉費';
+      out.innerHTML='<small>$</small>0';
+      bd.innerHTML='填入購買日期與出貨日期即可試算。';
+      $('timeline').classList.remove('show');
+      eligibility(); last={ready:false}; return;
+    }
+    if(s < b){
+      result.classList.add('fee');
+      status.textContent='日期錯誤';
+      out.innerHTML='<small>$</small>0';
+      bd.innerHTML='<span class="err">出貨日期不可早於購買日期,請重新確認。</span>';
+      $('timeline').classList.remove('show');
+      eligibility(); last={ready:false}; return;
+    }
+
+    if(qualifies){
+      const overDays = Math.round((s - deadline)/DAY);
+      if(overDays <= 0){
+        result.classList.remove('fee');
+        status.textContent='免費期內 · 無寄倉費';
+        out.innerHTML='<small>$</small>0';
+        const remain = Math.round((deadline - s)/DAY);
+        bd.innerHTML = `出貨日在免費寄倉截止日 <b>${fmt(deadline)}</b> 之前,免收寄倉費。<br>距免費期結束尚有 <b>${remain}</b> 天。`;
+        last={ready:true, fee:0, mode:'qualify', b, s, deadline, overDays:0, months:0};
+      } else {
+        const months = Math.ceil(overDays/MONTH_DAYS);
+        const fee = months*FEE_PER_MONTH;
+        result.classList.add('fee');
+        status.textContent='超過免費期 · 須收寄倉費';
+        out.innerHTML=`<small>$</small>${money(fee)}`;
+        bd.innerHTML = `超過免費截止日 <b>${fmt(deadline)}</b> 共 <b>${overDays}</b> 天<br>計 <b>${months}</b> 個月 × $${FEE_PER_MONTH} = <b>$${money(fee)}</b>`;
+        last={ready:true, fee, mode:'qualify', b, s, deadline, overDays, months};
+      }
+      drawTimeline(b, deadline, s, true);
+    } else {
+      // 未滿門檻:無免費期,自購買日起計費
+      const days = Math.round((s - b)/DAY);
+      const months = Math.ceil(days/MONTH_DAYS);
+      const fee = months*FEE_PER_MONTH;
+      if(fee === 0){
+        result.classList.remove('fee');
+        status.textContent='未達免費門檻 · 當日出貨';
+        out.innerHTML='<small>$</small>0';
+        bd.innerHTML = `訂單未滿 $${money(MIN_ORDER)},無免費期;購買當日出貨,暫無寄倉費。`;
+      } else {
+        result.classList.add('fee');
+        status.textContent='未達免費門檻 · 須收寄倉費';
+        out.innerHTML=`<small>$</small>${money(fee)}`;
+        bd.innerHTML = `訂單未滿 $${money(MIN_ORDER)},自購買日 <b>${fmt(b)}</b> 起計費。<br>寄倉 <b>${days}</b> 天 = <b>${months}</b> 個月 × $${FEE_PER_MONTH} = <b>$${money(fee)}</b>`;
+      }
+      last={ready:true, fee, mode:'under', b, s, days, months};
+      drawTimeline(b, deadline, s, false);
+    }
+
+    eligibility();
+  }
+
+  function eligibility(){
+    const el=$('elig'); const amt=getAmount();
+    if(amt === null){ el.className='elig'; return; }
+    if(amt >= MIN_ORDER){
+      el.className='elig show ok';
+      el.textContent=`✓ 訂單金額 $${money(amt)} 已達 $${money(MIN_ORDER)},享 90 天免費寄倉。`;
+    } else {
+      el.className='elig show no';
+      el.textContent=`✕ 訂單金額 $${money(amt)} 未達 $${money(MIN_ORDER)},無免費期,每月酌收 $${FEE_PER_MONTH}。`;
+    }
+  }
+
+  function drawTimeline(b, deadline, s, qualifies){
+    const tl=$('timeline'), bar=$('bar'), ticks=$('ticks');
+    if(qualifies){
+      const total = Math.max((s-b)/DAY, FREE_DAYS);
+      const freePct = Math.min(FREE_DAYS, total)/total*100;
+      const overPct = Math.max(0, 100-freePct);
+      bar.innerHTML = `<div class="seg-free" style="width:${freePct}%"></div>` +
+                      (overPct>0?`<div class="seg-over" style="width:${overPct}%"></div>`:'');
+      const shipPct = Math.min(100, (s-b)/DAY/total*100);
+      ticks.innerHTML = tick(0,'購買日',fmt(b),false) +
+                        tick(freePct,'免費截止',fmt(deadline),false) +
+                        tick(shipPct,'出貨日',fmt(s), s>deadline);
+    } else {
+      bar.innerHTML = `<div class="seg-over" style="width:100%"></div>`;
+      ticks.innerHTML = tick(0,'購買日',fmt(b),true) +
+                        tick(100,'出貨日',fmt(s),true);
+    }
+    tl.classList.add('show');
+  }
+  function tick(pct,lbl,dt,over){
+    const left=Math.max(8,Math.min(92,pct));
+    return `<div class="tick ${over?'over':''}" style="left:${left}%"><div class="dot"></div><div class="lbl">${lbl}</div><div class="dt">${dt}</div></div>`;
+  }
+
+  [buy, ship, amount].forEach(el=>el.addEventListener('input', render));
+  render();
+})();
+</script>
+</body>
+</html>

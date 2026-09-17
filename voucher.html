@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>百貨檔期抵用券計算器</title>
+<style>
+  :root{
+    --bg:#e3e7eb; --card:#f8f7f3; --ink:#4a3f30; --sub:#8a7f70;
+    --line:#d7dbe0; --brand:#66788e; --brand-d:#546276;
+    --good:#059669; --good-bg:#ecfdf5; --warn:#d97706; --warn-bg:#fffbeb;
+    --err:#dc2626; --err-bg:#fef2f2;
+    --point:#7c3aed; --point-bg:#f5f3ff; --voucher:#0891b2; --voucher-bg:#ecfeff;
+    --keep:#b45309; --keep-bg:#fffbeb; --redeem:#047857; --redeem-bg:#ecfdf5;
+    --radius:12px; --shadow:0 1px 3px rgba(60,50,35,.08),0 1px 2px rgba(60,50,35,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+       background:var(--bg);color:var(--ink);line-height:1.55;font-size:14px}
+  header{background:linear-gradient(135deg,#453829,#332920);color:#fff;padding:18px 20px}
+  header h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.5px}
+  header p{margin:4px 0 0;font-size:12px;color:#c9beae}
+  .wrap{max-width:1320px;margin:0 auto;padding:18px}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:18px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+  .card h2{margin:0 0 12px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card h2 .tag{font-size:11px;font-weight:500;color:var(--sub);background:var(--bg);padding:2px 8px;border-radius:20px}
+  label{display:block;font-size:12px;color:var(--sub);margin:8px 0 3px}
+  input,select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;background:#fff}
+  input:focus,select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(102,120,142,.18)}
+  input.bad{border-color:var(--err);background:var(--err-bg)}
+  button{cursor:pointer;font-family:inherit;border:none;border-radius:8px;font-size:13px;padding:8px 12px;font-weight:600;transition:.12s}
+  .btn{background:var(--brand);color:#fff}.btn:hover{background:var(--brand-d)}
+  .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  .btn-ghost:hover{background:var(--bg)}
+  .btn-sm{padding:5px 9px;font-size:12px}
+  .btn-x{background:none;color:#cbd5e1;padding:4px 7px;font-size:16px;font-weight:700}.btn-x:hover{color:#ef4444}
+  .row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .campaign-bar{display:flex;gap:6px;align-items:center;margin-bottom:12px}
+  .campaign-bar select{flex:1;font-weight:600}
+  .icon-btn{background:#fff;border:1px solid var(--line);color:var(--sub);padding:7px 9px;font-size:13px;border-radius:8px}
+  .icon-btn:hover{border-color:var(--brand);color:var(--brand)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
+  th{background:#f8fafc;color:var(--sub);font-weight:600;font-size:11.5px}
+  th:first-child,td:first-child{text-align:left;white-space:normal}
+  .thr-item{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;background:#fcfcfd}
+  .thr-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+  .thr-head strong{font-size:13px}
+  .mini{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .mini.three{grid-template-columns:1fr 1fr 1fr}
+  .mini label{margin:2px 0 1px}
+  .mini input,.mini select{padding:5px 7px;font-size:12px}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600}
+  .pill.v{background:var(--voucher-bg);color:var(--voucher)}
+  .pill.p{background:var(--point-bg);color:var(--point)}
+  .seg{display:inline-flex;background:var(--bg);border-radius:8px;padding:2px;gap:2px}
+  .seg button{background:none;color:var(--sub);padding:5px 12px;font-size:12px}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:var(--shadow)}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  .v-cell{color:var(--voucher);font-weight:600}
+  .p-cell{color:var(--point);font-weight:600}
+  .thr-item.off{opacity:.55;background:#f8fafc}
+  .sw{position:relative;display:inline-block;width:38px;height:21px;flex:none}
+  .sw input{opacity:0;width:0;height:0;position:absolute}
+  .sw-track{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;transition:.18s;cursor:pointer}
+  .sw-track:before{content:"";position:absolute;width:15px;height:15px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.18s}
+  .sw input:checked + .sw-track{background:var(--good)}
+  .sw input:checked + .sw-track:before{transform:translateX(17px)}
+  .sw-lbl{font-size:11px;color:var(--sub);font-weight:600;min-width:26px}
+  .qbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:9px 11px;background:#f8fafc;border:1px solid var(--line);border-radius:10px}
+  .qbar .qt{font-size:11.5px;color:var(--sub);font-weight:700;margin-right:2px}
+  .qchip{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 10px 4px 6px;font-size:12px}
+  .qchip.off{opacity:.6}
+  .qchip .nm{font-weight:600;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .breakdown{font-size:11px;color:var(--sub)}
+  .brk{font-size:11.5px;color:var(--sub);display:flex;align-items:center;gap:4px;justify-content:flex-end}
+  .brk .lbl{font-size:10px;font-weight:700;color:#9ca3af;background:#f1f5f9;border-radius:4px;padding:0 4px}
+  .brk .lbl.r{color:#fff;background:var(--redeem)}
+  .brk.redeem-line{color:var(--redeem);font-weight:600}
+  .brk .muted{color:#cbd5e1}
+  .brk .cap{font-size:10px;color:#fff;background:var(--warn);border-radius:4px;padding:0 4px}
+  .downtag{font-size:10px;font-weight:700;color:#fff;background:var(--err);border-radius:4px;padding:0 4px}
+  .hint{font-size:11px;color:var(--warn);background:var(--warn-bg);padding:1px 6px;border-radius:5px;display:inline-block;margin-top:2px}
+  .scn{display:inline-block;text-align:right;line-height:1.4}
+  .scn .big{font-size:14px;font-weight:800}
+  .scn .ln{font-size:11px;color:var(--sub)}
+  .scn.keep .big{color:var(--keep)} .scn.redeem .big{color:var(--redeem)}
+  td.keepcol{background:var(--keep-bg)} td.redeemcol{background:var(--redeem-bg)}
+  th.keepcol{background:#fef3c7;color:var(--keep)} th.redeemcol{background:#d1fae5;color:var(--redeem)}
+  .summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+  @media(max-width:680px){.summary{grid-template-columns:1fr}}
+  .scard{border:1px solid var(--line);border-radius:12px;padding:14px}
+  .scard.keep{background:var(--keep-bg);border-color:#fde68a}
+  .scard.redeem{background:var(--redeem-bg);border-color:#a7f3d0}
+  .scard .title{font-size:12px;font-weight:700;margin-bottom:8px}
+  .scard.keep .title{color:var(--keep)} .scard.redeem .title{color:var(--redeem)}
+  .scard .pay{font-size:24px;font-weight:800}
+  .scard .grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px;font-size:12px}
+  .scard .grid2 span:nth-child(odd){color:var(--sub)}
+  .scard .grid2 b{font-weight:700}
+  .note{font-size:11.5px;color:var(--sub);margin-top:6px;line-height:1.5}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .toolbar .spacer{flex:1}
+  .legend{font-size:11.5px;color:var(--sub);margin:0 0 10px;padding:9px 11px;background:var(--bg);border-radius:8px;line-height:1.6}
+  .legend b{color:var(--ink)}
+  .saved-flag{font-size:11px;color:var(--good);opacity:0;transition:.3s}
+  .saved-flag.show{opacity:1}
+  .warnbar{background:var(--err-bg);border:1px solid #fecaca;color:var(--err);font-size:12px;padding:8px 11px;border-radius:8px;margin-bottom:12px;display:none}
+  .warnbar.show{display:block}
+  .store-bar{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap;}
+  .store-bar-label{font-size:11px;color:#c9beae;font-weight:700;margin-right:2px;}
+  .store-bar select{width:auto;min-width:140px;flex:0 0 auto;}
+</style>
+</head>
+<body>
+<header>
+  <h1>百貨檔期 · 抵用券回饋計算器</h1>
+  <p>多檔期門檻管理 · 留券／現抵雙方案（方案B：折抵金額不計入滿額認列）· 自動儲存</p>
+  <div class="store-bar">
+    <span class="store-bar-label">門市</span>
+    <select id="storeSelect" onchange="switchStore(this.value)"></select>
+    <button class="icon-btn" title="新增門市" onclick="addStore()">＋</button>
+    <button class="icon-btn" title="改門市名稱" onclick="renameStore()">✎</button>
+    <button class="icon-btn" title="刪除此門市" onclick="deleteStore()">🗑</button>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="grid">
+
+  <!-- 左欄 -->
+  <div>
+    <div class="card">
+      <h2>① 活動門檻設定 <span class="tag">可疊加</span> <span class="saved-flag" id="flagC">已自動儲存</span></h2>
+      <div class="campaign-bar">
+        <select id="campaignSelect" onchange="switchCampaign(this.value)"></select>
+        <button class="icon-btn" title="新增檔期" onclick="addCampaign()">＋</button>
+        <button class="icon-btn" title="改檔期名稱" onclick="renameCampaign()">✎</button>
+        <button class="icon-btn" title="刪除此檔期" onclick="deleteCampaign()">🗑</button>
+      </div>
+      <div id="thresholds"></div>
+      <div class="row-actions"><button class="btn btn-sm" onclick="addThreshold()">＋ 新增門檻</button></div>
+      <p class="note">份數一律「無條件捨去」(滿額才給)。點數類型不可現抵，但會計入認列回饋。所有變更即時自動儲存。</p>
+    </div>
+
+    <div class="card">
+      <h2>計算模式</h2>
+      <div class="seg" id="modeSeg">
+        <button data-mode="single" class="on" onclick="setMode('single')">單品各自計算</button>
+        <button data-mode="basket" onclick="setMode('basket')">合併購物車</button>
+      </div>
+      <p class="note" id="modeNote"></p>
+    </div>
+  </div>
+
+  <!-- 右欄 -->
+  <div>
+    <div class="card">
+      <h2>② 商品清單 <span class="tag">輸入即存</span> <span class="saved-flag" id="flagP">已自動儲存</span></h2>
+      <div style="overflow-x:auto">
+        <table id="productTable">
+          <thead><tr><th>商品品名</th><th>原價</th><th>特價</th><th></th></tr></thead>
+          <tbody id="productBody"></tbody>
+        </table>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-sm" onclick="addProduct()">＋ 新增商品</button>
+        <button class="btn-ghost btn-sm" onclick="clearProducts()">清空清單</button>
+      </div>
+      <p class="note">每次輸入或修改自動儲存，下次開啟自動帶回。品名與原價每檔固定，平常只改「特價」。</p>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <h2 style="margin:0">③ 計算結果</h2>
+        <div class="spacer"></div>
+        <button class="btn-ghost btn-sm" onclick="exportCSV()">⬇ 匯出 CSV</button>
+      </div>
+      <div class="qbar" id="quickToggles"></div>
+      <div class="warnbar" id="warnbar"></div>
+      <div class="legend">
+        🟠 <b>留券方案</b>：本次付特價全額，認列＝特價，得券／點帶走下次用（回饋最多）。<br>
+        🟢 <b>現抵方案（方案B）</b>：券當場折抵，<b>折抵金額不算滿額</b> → 認列金額下降、回饋隨之減少。抵用券為<b>整張面額</b>（=各門檻回饋金額），<b>不找零、不溢收</b>，系統只折「整張券湊得出且不超過應付」的金額，其餘列為剩券。<br>
+        中間「門檻明細」每欄同時顯示 <span style="color:var(--keep);font-weight:700">留</span> 留券份數 與 <span style="color:var(--redeem);font-weight:700">抵</span> 現抵份數；現抵份數較少時以 <span style="background:var(--err);color:#fff;border-radius:4px;padding:0 4px;font-size:10px">−N</span> 標出少換幾份。
+      </div>
+      <div id="basketSummary"></div>
+      <div style="overflow-x:auto">
+        <table id="resultTable">
+          <thead id="resultThead"></thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+/* ========== 預設檔期 ========== */
+const DEFAULT_CAMPAIGNS = [
+  {id:"c9", name:"周年慶（10/1-10/18）", thresholds:[
+    {name:"家電 5,000/500",          base:5000, reward:500, type:"voucher", cap:null, enabled:true},
+    {name:"ICP 8,000/500",           base:8000, reward:500, type:"voucher", cap:null, enabled:true},
+    {name:"ICP綁聯名卡 8,000/300",    base:8000, reward:300, type:"voucher", cap:30,   enabled:true},
+  ]},
+];
+const DEFAULT_CURRENT_ID = "c9";  /* 鋪底：周年慶（10/1-10/18） */
+const CFG_VER = 5;                /* v5：周年慶 10/1-10/18、舊檔期清除、門檻可啟用/停用 */
+const DEFAULT_PRODUCTS = [
+  {name:"範例：DEEBOT X11 PRO 上下水版", original:69999, special:30000},
+  {name:"範例：DEEBOT T90 PRO (上下水款)", original:56988, special:24599},
+];
+
+/* ========== 共用小工具 ========== */
+const uid = () => 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const fmt = n => (Math.round(Number(n)||0)).toLocaleString('zh-TW');
+function num(v,d){ const n=Number(v); return Number.isFinite(n)?n:d; }
+function clip(s){ s=String(s||''); return s.length>11?s.slice(0,11)+'…':s; }
+function escapeHtml(s){return (s+'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ========== 載入正規化（容錯） ========== */
+function normT(t){ t=t||{}; return {
+  name: t.name!=null?String(t.name):'門檻',
+  base: num(t.base,0), reward: num(t.reward,0),
+  type: t.type==='point'?'point':'voucher',
+  cap: (t.cap==null||t.cap==='')?null:num(t.cap,null),
+  enabled: t.enabled===false?false:true
+};}
+function normCampaigns(arr){
+  if(!Array.isArray(arr)||!arr.length) return JSON.parse(JSON.stringify(DEFAULT_CAMPAIGNS));
+  return arr.map(c=>({id:(c&&c.id)||uid(), name:(c&&c.name!=null)?String(c.name):'未命名檔期',
+    thresholds: Array.isArray(c&&c.thresholds)? c.thresholds.map(normT) : []}));
+}
+function normProducts(arr){
+  if(!Array.isArray(arr)) return JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
+  return arr.map(p=>({name:p&&p.name!=null?String(p.name):'', original:num(p&&p.original,0), special:num(p&&p.special,0)}));
+}
+
+/* ========== 狀態 + 自動儲存 ========== */
+const LS={
+  stores:"voucher_stores_v1", activeStore:"voucher_active_store_v1",
+  camp:"voucher_campaigns_v3", cur:"voucher_current_v3",
+  prod:"voucher_products_v3", mode:"voucher_mode_v3", ver:"voucher_cfgver_v3"
+};
+function load(k,def){ try{const d=localStorage.getItem(k); return d?JSON.parse(d):def;}catch(e){return def;} }
+
+function normStores(arr){
+  if(!Array.isArray(arr)||!arr.length) return null;
+  return arr.map(s=>({
+    id:(s&&s.id)||uid(),
+    name:(s&&s.name!=null)?String(s.name):'未命名門市',
+    campaigns:normCampaigns(s&&s.campaigns),
+    currentId:(s&&s.currentId)||null
+  }));
+}
+
+let stores, activeStoreId;
+const _storedStores = load(LS.stores, null);
+if(_storedStores===null){
+  // 舊版（單一門市、扁平檔期清單）資料遷移，或全新安裝
+  const _storedCamp = load(LS.camp, null);
+  let migratedCampaigns, migratedCurrentId;
+  if(_storedCamp===null){
+    migratedCampaigns = normCampaigns(DEFAULT_CAMPAIGNS);
+    migratedCurrentId = DEFAULT_CURRENT_ID;
+  }else if(load(LS.ver,0) < CFG_VER){
+    migratedCampaigns = normCampaigns(DEFAULT_CAMPAIGNS);
+    migratedCurrentId = DEFAULT_CURRENT_ID;
+  }else{
+    migratedCampaigns = normCampaigns(_storedCamp);
+    const missing = DEFAULT_CAMPAIGNS.filter(d=>!migratedCampaigns.some(c=>c.id===d.id));
+    if(missing.length) migratedCampaigns = migratedCampaigns.concat(normCampaigns(missing));
+    migratedCurrentId = load(LS.cur, DEFAULT_CURRENT_ID);
+  }
+  if(!migratedCampaigns.find(c=>c.id===migratedCurrentId)) migratedCurrentId = migratedCampaigns[0].id;
+  stores = [
+    {id:uid(), name:'信義統一', campaigns:migratedCampaigns, currentId:migratedCurrentId},
+    {id:uid(), name:'信義Dreame', campaigns:normCampaigns(DEFAULT_CAMPAIGNS), currentId:DEFAULT_CURRENT_ID}
+  ];
+  activeStoreId = stores[0].id;
+}else{
+  stores = normStores(_storedStores) || [{id:uid(), name:'信義統一', campaigns:normCampaigns(DEFAULT_CAMPAIGNS), currentId:DEFAULT_CURRENT_ID}];
+  stores.forEach(s=>{ if(!s.campaigns.find(c=>c.id===s.currentId)) s.currentId = s.campaigns[0].id; });
+  activeStoreId = load(LS.activeStore, null);
+  if(!activeStoreId || !stores.some(s=>s.id===activeStoreId)) activeStoreId = stores[0].id;
+}
+let products  = normProducts(load(LS.prod, DEFAULT_PRODUCTS));
+let mode      = load(LS.mode, "single");
+
+function persist(which){
+  try{
+    localStorage.setItem(LS.stores, JSON.stringify(stores));
+    localStorage.setItem(LS.activeStore, JSON.stringify(activeStoreId));
+    localStorage.setItem(LS.prod, JSON.stringify(products));
+    localStorage.setItem(LS.mode, JSON.stringify(mode));
+    localStorage.setItem(LS.ver, JSON.stringify(CFG_VER));
+    flash(which);
+  }catch(e){ /* 無痕模式/配額滿：靜默不中斷操作 */ }
+}
+function flash(which){ const el=document.getElementById(which==='product'?'flagP':'flagC'); if(!el)return; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),900); }
+function activeStore(){ return stores.find(s=>s.id===activeStoreId) || stores[0]; }
+function curCampaign(){ const st=activeStore(); return st.campaigns.find(c=>c.id===st.currentId) || st.campaigns[0]; }
+
+function renderStoreSelect(){
+  document.getElementById('storeSelect').innerHTML =
+    stores.map(s=>`<option value="${s.id}" ${s.id===activeStoreId?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
+}
+function switchStore(id){ activeStoreId=id; persist('config'); renderCampaignSelect(); renderThresholds(); renderQuickToggles(); compute(); }
+function addStore(){
+  const name=prompt("輸入新門市名稱：","新門市"); if(!name||!name.trim())return;
+  const camps=normCampaigns(DEFAULT_CAMPAIGNS);
+  const st={id:uid(), name:name.trim(), campaigns:camps, currentId:camps[0].id};
+  stores.push(st); activeStoreId=st.id; persist('config');
+  renderStoreSelect(); renderCampaignSelect(); renderThresholds(); renderQuickToggles(); compute();
+}
+function renameStore(){ const st=activeStore(); const name=prompt("修改門市名稱：",st.name); if(!name||!name.trim())return; st.name=name.trim(); persist('config'); renderStoreSelect(); }
+function deleteStore(){
+  if(stores.length<=1){alert("至少需保留一個門市");return;}
+  if(!confirm(`確定刪除門市「${activeStore().name}」？此門市內所有檔期設定都會一併刪除，且無法復原。`))return;
+  stores=stores.filter(x=>x.id!==activeStoreId); activeStoreId=stores[0].id;
+  persist('config'); renderStoreSelect(); renderCampaignSelect(); renderThresholds(); renderQuickToggles(); compute();
+}
+
+/* ========== 核心計算 ========== */
+// 依認列金額 Q 計算某類型回饋
+function earn(Q, type){
+  return curCampaign().thresholds.filter(t=>t.type===type && t.enabled!==false).reduce((s,t)=>{
+    if(!(t.base>0)) return s;
+    let q=Math.floor(Q/t.base);
+    if(t.cap!=null && t.cap>=0) q=Math.min(q,t.cap);
+    if(q<0) q=0;
+    return s + q*t.reward;
+  },0);
+}
+const voucherOf = Q => earn(Q,'voucher');
+const pointOf   = Q => earn(Q,'point');
+
+// 逐門檻明細（給某認列金額 Q）
+function breakdown(Q){
+  return curCampaign().thresholds.map(t=>{
+    if(t.enabled===false) return {...t, qty:0, reward:0, toNext:null, off:true};
+    let qty = t.base>0 ? Math.floor(Q/t.base) : 0;
+    if(t.cap!=null && t.cap>=0) qty=Math.min(qty,t.cap);
+    if(qty<0) qty=0;
+    const reward = qty*t.reward;
+    const rem = t.base>0 ? Q%t.base : 0;
+    const toNext = (t.base>0 && rem>0 && (t.cap==null||qty<t.cap)) ? t.base-rem : null;
+    return {...t, qty, reward, toNext};
+  });
+}
+
+// 折抵券為「離散面額」= 各門檻回饋金額（回饋500 → 一張500元券）
+// 規則：不找零、不溢收 → 可折金額須由整張券湊出，且 ≤ 應付
+function notesAt(Q){
+  return curCampaign().thresholds
+    .filter(t=>t.type==='voucher' && t.base>0 && t.reward>0 && t.enabled!==false)
+    .map(t=>{ let n=Math.floor(Q/t.base); if(t.cap!=null&&t.cap>=0)n=Math.min(n,t.cap); if(n<0)n=0; return {denom:t.reward,count:n}; })
+    .filter(x=>x.count>0);
+}
+function achievableSums(notes){
+  let sums=new Set([0]);
+  for(const {denom,count} of notes){
+    const nx=new Set();
+    for(const s of sums) for(let k=0;k<=count;k++) nx.add(s+k*denom);
+    sums=nx;
+    if(sums.size>50000) break; // 安全上限
+  }
+  return sums;
+}
+function voucherCountTotal(Q){ return notesAt(Q).reduce((s,n)=>s+n.count,0); }
+
+// 方案B（離散不動點）：最大化可折券 u，使 u 能由「認列(S−u)時所得的整張券」湊出
+function solveRedeem(S){
+  S=Math.max(0,num(S,0));
+  // 券張數過多 → 退回連續近似，避免效能問題
+  if(voucherCountTotal(S)>300){
+    let lo=0,hi=S; while(lo<hi){const m=(lo+hi)>>1; if(m+voucherOf(m)>=S)hi=m; else lo=m+1;}
+    const Q=lo,earned=voucherOf(Q),used=S-Q;
+    return {qualifying:Q,cash:Q,used,earned,leftover:earned-used,points:pointOf(Q),approx:true};
+  }
+  const bps=new Set([0,S]);
+  curCampaign().thresholds.forEach(t=>{
+    if(t.type!=='voucher'||!(t.base>0)||t.enabled===false)return;
+    const maxN=t.cap!=null?Math.min(t.cap,Math.floor(S/t.base)):Math.floor(S/t.base);
+    for(let k=1;k<=maxN;k++){ if(k*t.base<=S) bps.add(k*t.base); }
+  });
+  const pts=[...bps].sort((a,b)=>a-b);
+  let best={qualifying:S,cash:S,used:0,earned:voucherOf(S),leftover:voucherOf(S),points:pointOf(S)};
+  for(let i=0;i<pts.length;i++){
+    const lo=pts[i], hi=(i+1<pts.length?pts[i+1]:S+1);
+    const M=notesAt(lo);
+    const total=M.reduce((s,n)=>s+n.denom*n.count,0);
+    const sums=[...achievableSums(M)].sort((a,b)=>b-a);
+    for(const u of sums){
+      const Q=S-u;
+      if(u<=S && Q>=lo && Q<hi){
+        if(u>best.used) best={qualifying:Q,cash:Q,used:u,earned:total,leftover:total-u,points:pointOf(Q)};
+        break; // 該區段內最大可折
+      }
+    }
+  }
+  return best;
+}
+
+// 整合：留券 + 現抵
+function analyze(S){
+  S=Math.max(0,num(S,0));
+  const redeem=solveRedeem(S);
+  redeem.rows=breakdown(redeem.qualifying);   // 現抵：依「認列金額」逐門檻份數
+  return {
+    S,
+    keep:{ pay:S, voucher:voucherOf(S), point:pointOf(S), rows:breakdown(S) },
+    redeem
+  };
+}
+
+/* ========== 檔期 UI ========== */
+function renderCampaignSelect(){
+  const st=activeStore();
+  document.getElementById('campaignSelect').innerHTML =
+    st.campaigns.map(c=>`<option value="${c.id}" ${c.id===st.currentId?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+}
+function switchCampaign(id){ activeStore().currentId=id; persist('config'); renderThresholds(); renderQuickToggles(); compute(); }
+function addCampaign(){
+  const name=prompt("輸入新檔期名稱：","新檔期"); if(!name||!name.trim())return;
+  const c={id:uid(),name:name.trim(),thresholds:[{name:"會員 5,000/500",base:5000,reward:500,type:"voucher",cap:null}]};
+  const st=activeStore();
+  st.campaigns.push(c); st.currentId=c.id; persist('config'); renderCampaignSelect(); renderThresholds(); compute();
+}
+function renameCampaign(){ const c=curCampaign(); const name=prompt("修改檔期名稱：",c.name); if(!name||!name.trim())return; c.name=name.trim(); persist('config'); renderCampaignSelect(); }
+function deleteCampaign(){
+  const st=activeStore();
+  if(st.campaigns.length<=1){alert("至少需保留一個檔期");return;}
+  if(!confirm(`確定刪除檔期「${curCampaign().name}」？`))return;
+  st.campaigns=st.campaigns.filter(x=>x.id!==st.currentId); st.currentId=st.campaigns[0].id;
+  persist('config'); renderCampaignSelect(); renderThresholds(); compute();
+}
+
+/* ========== 門檻編輯 ========== */
+function renderThresholds(){
+  const ts=curCampaign().thresholds;
+  document.getElementById('thresholds').innerHTML = ts.map((t,i)=>`
+    <div class="thr-item${t.enabled===false?' off':''}">
+      <div class="thr-head"><strong>門檻 ${i+1}</strong>
+        <span style="display:flex;align-items:center;gap:6px">
+          <label class="sw"><input type="checkbox" ${t.enabled===false?'':'checked'} onchange="toggleT(${i},this.checked)"><span class="sw-track"></span></label>
+          <span class="sw-lbl">${t.enabled===false?'停用':'啟用'}</span>
+          <button class="btn-x" onclick="delThreshold(${i})">×</button>
+        </span>
+      </div>
+      <label>門檻名稱</label>
+      <input value="${escapeHtml(t.name)}" oninput="updT(${i},'name',this.value)">
+      <div class="mini three" style="margin-top:6px">
+        <div><label>每滿（元）</label><input type="number" min="0" value="${t.base}" oninput="updT(${i},'base',this.value)"></div>
+        <div><label>回饋（元）</label><input type="number" min="0" value="${t.reward}" oninput="updT(${i},'reward',this.value)"></div>
+        <div><label>份數上限</label><input type="number" min="0" placeholder="無" value="${t.cap??''}" oninput="updT(${i},'cap',this.value)"></div>
+      </div>
+      <div class="mini" style="margin-top:6px">
+        <div><label>類型</label>
+          <select onchange="updT(${i},'type',this.value)">
+            <option value="voucher" ${t.type==='voucher'?'selected':''}>抵用券（可折抵）</option>
+            <option value="point" ${t.type==='point'?'selected':''}>點數（不折抵）</option>
+          </select></div>
+        <div style="display:flex;align-items:flex-end"><span class="pill ${t.type==='voucher'?'v':'p'}">${t.type==='voucher'?'券':'點'}</span></div>
+      </div>
+    </div>`).join('');
+}
+function updT(i,k,v){
+  const t=curCampaign().thresholds[i];
+  if(k==='name'||k==='type') t[k]=v;
+  else if(k==='cap') t.cap=(v===''?null:num(v,null));
+  else t[k]=num(v,0);
+  persist('config'); compute(); if(k==='type')renderThresholds();
+}
+function toggleT(i,on){ curCampaign().thresholds[i].enabled=!!on; persist('config'); renderThresholds(); renderQuickToggles(); compute(); }
+function addThreshold(){ curCampaign().thresholds.push({name:"新門檻",base:5000,reward:500,type:"voucher",cap:null,enabled:true}); persist('config'); renderThresholds(); renderQuickToggles(); compute(); }
+function delThreshold(i){ curCampaign().thresholds.splice(i,1); persist('config'); renderThresholds(); renderQuickToggles(); compute(); }
+
+/* ========== 商品編輯 ========== */
+function renderProducts(){
+  document.getElementById('productBody').innerHTML = products.map((p,i)=>`
+    <tr>
+      <td><input value="${escapeHtml(p.name)}" oninput="updP(${i},'name',this.value)" style="min-width:200px"></td>
+      <td><input type="number" min="0" class="num" value="${p.original}" oninput="updP(${i},'original',this.value)" style="width:90px;text-align:right"></td>
+      <td><input type="number" min="0" class="num" value="${p.special}" oninput="updP(${i},'special',this.value)" style="width:90px;text-align:right"></td>
+      <td><button class="btn-x" onclick="delProduct(${i})">×</button></td>
+    </tr>`).join('');
+}
+function updP(i,k,v){ products[i][k]= k==='name'?v:num(v,0); persist('product'); compute(); }
+function addProduct(){ products.push({name:"",original:0,special:0}); persist('product'); renderProducts(); compute(); }
+function delProduct(i){ products.splice(i,1); persist('product'); renderProducts(); compute(); }
+function clearProducts(){ if(confirm("清空整份商品清單？")){ products=[]; persist('product'); renderProducts(); compute(); } }
+
+/* ========== 主畫面快速開關 ========== */
+function renderQuickToggles(){
+  const el=document.getElementById('quickToggles'); if(!el) return;
+  const ts=curCampaign().thresholds;
+  if(!ts.length){ el.style.display='none'; return; }
+  el.style.display='flex';
+  el.innerHTML='<span class="qt">門檻啟用：</span>'+ts.map((t,i)=>`
+    <span class="qchip${t.enabled===false?' off':''}">
+      <label class="sw"><input type="checkbox" ${t.enabled===false?'':'checked'} onchange="toggleT(${i},this.checked)"><span class="sw-track"></span></label>
+      <span class="nm">${escapeHtml(t.name)}</span>
+    </span>`).join('');
+}
+
+/* ========== 防呆檢查 ========== */
+function validate(){
+  const w=[]; const ts=curCampaign().thresholds;
+  ts.forEach((t,i)=>{ if(t.base<0||t.reward<0||(t.cap!=null&&t.cap<0)) w.push(`門檻 ${i+1} 有負數`);
+                      if(!(t.base>0)) w.push(`門檻 ${i+1} 的「每滿金額」需大於 0`); });
+  products.forEach((p,i)=>{ if(p.special<0||p.original<0) w.push(`商品 ${i+1} 金額為負`);
+                            if(p.original>0&&p.special>p.original) w.push(`商品 ${i+1} 特價高於原價`); });
+  const bar=document.getElementById('warnbar');
+  if(w.length){ bar.innerHTML='⚠ '+[...new Set(w)].join('；'); bar.classList.add('show'); }
+  else bar.classList.remove('show');
+}
+
+/* ========== 結果渲染 ========== */
+function compute(){
+  validate();
+  const ts=curCampaign().thresholds;
+  // 表頭
+  let head='<tr>'+['商品品名','原價','特價'].map(h=>`<th>${h}</th>`).join('')
+    + ts.map(t=>`<th>${escapeHtml(clip(t.name))}</th>`).join('')
+    + '<th class="keepcol">🟠 留券方案</th><th class="redeemcol">🟢 現抵方案</th></tr>';
+  document.getElementById('resultThead').innerHTML=head;
+
+  const body=document.getElementById('resultBody');
+  const bs=document.getElementById('basketSummary');
+
+  function rowHtml(name, orig, S){
+    const a=analyze(S); const k=a.keep, r=a.redeem;
+    let tds=[name, fmt(orig), fmt(a.S)];
+    k.rows.forEach((row,idx)=> tds.push(rewardCell(row, r.rows[idx])));
+    // 留券 cell
+    const keepDisc = orig>0 ? ((a.S - k.voucher)/orig*10).toFixed(2)+' 折' : '';
+    tds.push(`<div class="scn keep"><span class="big num">$${fmt(k.pay)}</span>
+      <div class="ln num">得券 $${fmt(k.voucher)}${k.point?` · 得點 ${fmt(k.point)}`:''}</div>
+      <div class="ln">下次用 ${keepDisc?'· ≈'+keepDisc:''}</div></div>`);
+    // 現抵 cell
+    const redDisc = orig>0 ? (r.cash/orig*10).toFixed(2)+' 折' : '';
+    tds.push(`<div class="scn redeem"><span class="big num">$${fmt(r.cash)}</span>
+      <div class="ln num">折券 $${fmt(r.used)}${r.leftover>0?` · 剩券 $${fmt(r.leftover)}`:''}</div>
+      <div class="ln num">認列 $${fmt(r.qualifying)}${r.points?` · 得點 ${fmt(r.points)}`:''} ${redDisc?'· ≈'+redDisc:''}</div></div>`);
+    return `<tr>${tds.map((x,i)=>{
+      const cls = i===0?'':' class="num"';
+      const c2 = i===tds.length-2?' class="keepcol"':(i===tds.length-1?' class="redeemcol"':cls);
+      return `<td${c2}>${x}</td>`;
+    }).join('')}</tr>`;
+  }
+
+  if(mode==='basket'){
+    const S=products.reduce((a,p)=>a+(num(p.special,0)),0);
+    const O=products.reduce((a,p)=>a+(num(p.original,0)),0);
+    const a=analyze(S); const k=a.keep, r=a.redeem;
+    bs.innerHTML=`<div class="summary">
+      <div class="scard keep"><div class="title">🟠 留券方案（回饋最多，券下次用）</div>
+        <div class="pay num">現金 $${fmt(k.pay)}</div>
+        <div class="grid2"><span>認列金額</span><b class="num">$${fmt(a.S)}</b>
+          <span>得抵用券</span><b class="num">$${fmt(k.voucher)}</b>
+          <span>得點數</span><b class="num">${fmt(k.point)}</b></div></div>
+      <div class="scard redeem"><div class="title">🟢 現抵方案（現金最少，折抵不計滿額）</div>
+        <div class="pay num">現金 $${fmt(r.cash)}</div>
+        <div class="grid2"><span>認列金額</span><b class="num">$${fmt(r.qualifying)}</b>
+          <span>實際折抵券</span><b class="num">$${fmt(r.used)}</b>
+          <span>剩餘券(下次)</span><b class="num">$${fmt(r.leftover)}</b>
+          <span>得點數</span><b class="num">${fmt(r.points)}</b></div></div>
+    </div>`;
+    body.innerHTML=rowHtml(`<b>購物車合併（${products.length} 件）</b>`, O, S);
+  } else {
+    bs.innerHTML='';
+    body.innerHTML=products.map(p=>rowHtml(escapeHtml(p.name||'(未命名)'), num(p.original,0), num(p.special,0))).join('');
+  }
+}
+
+function rewardCell(kr, rr){
+  const isV = kr.type==='voucher';
+  const unit = isV?'$':'';
+  const vcls = isV?'v-cell':'p-cell';
+  // 留券（依特價全額認列）
+  let html=`<div class="brk"><span class="lbl">留</span>`
+    +`<span class="${kr.reward?vcls:'muted'} num">${kr.qty} 份 ${kr.reward?unit+fmt(kr.reward):'—'}</span>`
+    +`${kr.cap!=null&&kr.qty>=kr.cap?'<span class="cap">上限</span>':''}</div>`;
+  // 現抵（依認列金額）
+  const diff = (rr?rr.qty:0) - kr.qty;
+  const rqty = rr?rr.qty:0, rrew = rr?rr.reward:0;
+  html+=`<div class="brk redeem-line"><span class="lbl r">抵</span>`
+    +`<span class="num">${rqty} 份 ${rrew?unit+fmt(rrew):'—'}</span>`
+    +`${diff<0?`<span class="downtag">−${-diff}</span>`:''}</div>`;
+  if(kr.toNext!=null) html+=`<div class="hint">留券再加 $${fmt(kr.toNext)} 多 1 份</div>`;
+  return html;
+}
+
+/* ========== 模式 ========== */
+function setMode(m){
+  mode=m; persist('config');
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+  document.getElementById('modeNote').textContent = m==='basket'
+    ? '門檻以「全部特價加總」計算 — 符合百貨同筆結帳累計門檻，回饋通常較多。'
+    : '每件商品各自跑門檻 — 適合單機高單價、分開結帳。';
+  compute();
+}
+
+/* ========== 匯出 CSV（全欄加引號） ========== */
+function csvCell(v){ return '"'+String(v??'').replace(/"/g,'""').replace(/\r?\n/g,' ')+'"'; }
+function exportCSV(){
+  const ts=curCampaign().thresholds;
+  const header=['商品品名','原價','特價',
+    ...ts.map(t=>t.name+' 留券份數'),
+    ...ts.map(t=>t.name+' 現抵份數'),
+    '留券_現金','留券_得券','留券_得點',
+    '現抵_認列金額','現抵_現金實付','現抵_實際折券','現抵_剩餘券','現抵_得點'];
+  const lines=[header.map(csvCell).join(',')];
+  const dump=(name,orig,S)=>{
+    const a=analyze(S),k=a.keep,r=a.redeem;
+    const row=[name,orig,a.S,...k.rows.map(x=>x.qty),...r.rows.map(x=>x.qty),
+      k.pay,k.voucher,k.point, r.qualifying,r.cash,r.used,r.leftover,r.points];
+    lines.push(row.map(csvCell).join(','));
+  };
+  if(mode==='basket'){
+    const S=products.reduce((a,p)=>a+num(p.special,0),0);
+    const O=products.reduce((a,p)=>a+num(p.original,0),0);
+    dump('購物車合併',O,S);
+  } else products.forEach(p=>dump(p.name||'(未命名)',num(p.original,0),num(p.special,0)));
+  const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`抵用券_${curCampaign().name}_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+/* ========== init ========== */
+renderStoreSelect(); renderCampaignSelect(); renderThresholds(); renderQuickToggles(); renderProducts(); setMode(mode);
+persist('config');   // 存回合併後的檔期與版本旗標
+</script>
+</body>
+</html>
