@@ -49,6 +49,8 @@ body{
 .sidebar.collapsed .brand-text,
 .sidebar.collapsed .nav-label,
 .sidebar.collapsed .nav-tag,
+.sidebar.collapsed .nav-divider-label,
+.sidebar.collapsed .nav-ext-icon,
 .sidebar.collapsed .sidebar-footer{display:none;}
 .sidebar.collapsed .sidebar-brand{justify-content:center;padding:4px 0 18px;}
 .sidebar.collapsed .nav-item{justify-content:center;padding:10px 4px;}
@@ -79,6 +81,10 @@ body{
   margin-left:auto;font-size:9.5px;background:var(--line);color:var(--ink-soft);
   padding:2px 7px;border-radius:999px;font-weight:700;
 }
+.nav-divider{margin:10px 4px 6px;padding-top:10px;border-top:1px solid var(--line);}
+.nav-divider-label{font-size:10px;font-weight:700;color:var(--ink-soft);letter-spacing:.04em;}
+.nav-external{text-decoration:none;}
+.nav-ext-icon{margin-left:auto;font-size:12px;color:var(--ink-soft);}
 .sidebar-footer{margin-top:auto;padding-top:14px;border-top:1px solid var(--line);}
 .sidebar-footer .role-label{font-size:10.5px;color:var(--ink-soft);margin-bottom:6px;}
 .sidebar-footer .role-badge{
@@ -140,6 +146,13 @@ iframe{width:100%;height:100%;border:none;display:block;background:var(--paper);
   <button class="nav-item" data-module="m3">
     <span class="nav-bullet"></span><span class="nav-label">寄倉費試算</span>
   </button>
+  <button class="nav-item" data-module="m4">
+    <span class="nav-bullet"></span><span class="nav-label">業務績效分配系統</span>
+  </button>
+  <div class="nav-divider"><span class="nav-divider-label">外部工具</span></div>
+  <a class="nav-item nav-external" href="https://beutii-puchase-notice.netlify.app/" target="_blank" rel="noopener">
+    <span class="nav-bullet"></span><span class="nav-label">購買須知</span><span class="nav-ext-icon">↗</span>
+  </a>
   <div class="sidebar-footer">
     <div class="role-label">系統管理者</div>
     <span class="role-badge">管理者</span>
@@ -179,6 +192,11 @@ var MODULES = {
     title: '寄倉費試算',
     desc: '免費寄倉資格確認與逾期費用試算',
     url: 'storage.html'
+  },
+  m4: {
+    title: '業務績效分配系統',
+    desc: '依排班數與職務加權比重，自動分配每人當月業績目標',
+    url: 'allocation.html'
   }
 };
 
@@ -197,7 +215,7 @@ function showPlaceholder(msg){
 
 function loadModule(key){
   var mod = MODULES[key];
-  Array.prototype.forEach.call(document.querySelectorAll('.nav-item'), function(el){
+  Array.prototype.forEach.call(document.querySelectorAll('.nav-item[data-module]'), function(el){
     el.classList.toggle('active', el.getAttribute('data-module')===key);
   });
   if(!mod){
@@ -218,7 +236,7 @@ function loadModule(key){
   frame.setAttribute('data-current', key);
 }
 
-Array.prototype.forEach.call(document.querySelectorAll('.nav-item'), function(btn){
+Array.prototype.forEach.call(document.querySelectorAll('.nav-item[data-module]'), function(btn){
   btn.addEventListener('click', function(){
     if(btn.classList.contains('disabled')) return;
     loadModule(btn.getAttribute('data-module'));

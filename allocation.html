@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>業務績效分配系統｜Beutii</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --navy:#453829;
+    --navy-light:#6b5a44;
+    --navy-pale:#e3e7eb;
+    --accent:#66788e;
+    --accent-pale:#e6eaee;
+    --bg:#e3e7eb;
+    --surface:#f8f7f3;
+    --text:#4a3f30;
+    --text-muted:#8a7f70;
+    --border:#d7dbe0;
+    --danger:#dc2626;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1160px;margin:0 auto;padding:28px 20px 60px;}
+
+  /* header */
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px;border-bottom:2px solid var(--navy);padding-bottom:16px;}
+  .head .eyebrow{font-size:11px;letter-spacing:.18em;color:var(--accent);font-weight:700;margin-bottom:6px;}
+  .head h1{margin:0;font-size:26px;font-weight:800;color:var(--navy);letter-spacing:.01em;}
+  .head .sub{margin-top:4px;font-size:13px;color:var(--text-muted);}
+  .month-box{display:flex;align-items:center;gap:8px;}
+  .month-box label{font-size:12px;color:var(--text-muted);}
+  .month-box input[type=month]{border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;background:var(--surface);color:var(--text);}
+
+  /* cards */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:18px;box-shadow:0 1px 2px rgba(28,43,69,.04);}
+  .card h2{margin:0 0 14px;font-size:14px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px;}
+  .card h2 .n{display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--navy);color:#fff;font-size:11px;align-items:center;justify-content:center;font-weight:700;}
+
+  /* target grid */
+  .target-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  @media (max-width:800px){.target-grid{grid-template-columns:repeat(2,1fr);}}
+  .field label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;}
+  .field .money{position:relative;}
+  .field .money span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;}
+  .field input{width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:15px;font-variant-numeric:tabular-nums;background:#fffdf9;color:var(--text);}
+  .field .money input{padding-left:28px;}
+  .field input:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .basis-toggle{display:flex;gap:6px;margin-top:6px;}
+  .basis-toggle button{flex:1;border:1px solid var(--border);background:#fffdf9;color:var(--text-muted);border-radius:8px;padding:9px 8px;font-size:13px;cursor:pointer;transition:.15s;}
+  .basis-toggle button.active{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700;}
+
+  /* table */
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;min-width:920px;}
+  thead th{
+    background:var(--navy);color:#fff;font-size:12px;font-weight:600;text-align:right;
+    padding:10px 10px;white-space:nowrap;position:sticky;top:0;
+  }
+  thead th:first-child{text-align:left;border-radius:8px 0 0 0;}
+  thead th:last-child{border-radius:0 8px 0 0;}
+  tbody td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:14px;text-align:right;font-variant-numeric:tabular-nums;}
+  tbody td:first-child{text-align:left;}
+  tbody tr:hover{background:var(--navy-pale);}
+  tbody input[type=text]{width:100%;border:1px solid transparent;background:transparent;font-size:14px;font-weight:600;color:var(--text);padding:6px 8px;border-radius:6px;}
+  tbody input[type=text]:focus{outline:none;border-color:var(--accent);background:#fff;}
+  tbody input[type=number]{width:78px;text-align:right;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:14px;font-variant-numeric:tabular-nums;background:#fffdf9;}
+  tbody input[type=number]:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .readonly{color:var(--navy-light);font-weight:600;}
+  .alloc{color:var(--navy);font-weight:800;}
+  .ratio-cell{display:flex;align-items:center;gap:8px;justify-content:flex-end;}
+  .bar-track{width:64px;height:6px;background:var(--navy-pale);border-radius:4px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--navy));border-radius:4px;}
+  .del-btn{border:none;background:none;color:var(--danger);cursor:pointer;font-size:16px;line-height:1;padding:4px 6px;border-radius:6px;}
+  .del-btn:hover{background:#fef2f2;}
+  tfoot td{padding:12px 10px;font-weight:800;font-size:14px;background:var(--accent-pale);color:var(--navy);border-top:2px solid var(--navy);text-align:right;font-variant-numeric:tabular-nums;}
+  tfoot td:first-child{text-align:left;}
+
+  .row-actions{display:flex;justify-content:space-between;align-items:center;margin-top:14px;flex-wrap:wrap;gap:10px;}
+  .add-btn{border:1px dashed var(--accent);background:var(--accent-pale);color:var(--navy);font-weight:700;font-size:13px;padding:9px 16px;border-radius:8px;cursor:pointer;}
+  .add-btn:hover{background:#d7dee3;}
+
+  .formula-note{font-size:12px;color:var(--text-muted);line-height:1.8;background:var(--navy-pale);border-radius:10px;padding:12px 16px;margin-top:14px;}
+  .formula-note b{color:var(--navy);}
+
+  /* save bar */
+  .save-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .save-bar .left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .btn{border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-primary{background:var(--navy);color:#fff;}
+  .btn-primary:hover{background:var(--navy-light);}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+  .btn-ghost:hover{border-color:var(--navy);}
+  select.hist{border:1px solid var(--border);border-radius:8px;padding:9px 10px;font-size:13px;background:#fffdf9;color:var(--text);}
+  .status{font-size:12px;color:var(--text-muted);}
+  .status.ok{color:#059669;}
+
+  /* annual target drawer */
+  .drawer-tab{position:fixed;left:0;top:50%;transform:translateY(-50%);writing-mode:vertical-rl;text-orientation:upright;background:var(--navy);color:#fff;border:none;padding:16px 8px;font-size:13px;font-weight:700;letter-spacing:.1em;border-radius:0 8px 8px 0;cursor:pointer;z-index:40;box-shadow:2px 0 8px rgba(28,43,69,.15);}
+  .drawer-tab:hover{background:var(--navy-light);}
+  .drawer-overlay{position:fixed;inset:0;background:rgba(28,43,69,.25);z-index:45;opacity:0;pointer-events:none;transition:opacity .2s;}
+  .drawer-overlay.open{opacity:1;pointer-events:auto;}
+  .drawer{position:fixed;left:-340px;top:0;bottom:0;width:320px;background:var(--surface);z-index:50;box-shadow:4px 0 24px rgba(28,43,69,.18);transition:left .25s ease;padding:22px 20px;overflow-y:auto;}
+  .drawer.open{left:0;}
+  .drawer-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+  .drawer-head h2{margin:0;font-size:15px;font-weight:800;color:var(--navy);}
+  .drawer-close{border:none;background:none;font-size:18px;color:var(--text-muted);cursor:pointer;line-height:1;padding:2px 4px;}
+  .drawer-sub{font-size:12px;color:var(--text-muted);margin-bottom:16px;}
+  .drawer-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .drawer-row label{font-size:13px;font-weight:700;color:var(--text);}
+  .drawer-row .money{position:relative;width:150px;}
+  .drawer-row .money span{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;}
+  .drawer-row input{width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 8px 8px 24px;font-size:13px;font-variant-numeric:tabular-nums;background:#fffdf9;}
+  .drawer-row input:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .drawer-note{font-size:11px;color:var(--text-muted);margin-top:14px;line-height:1.7;}
+
+  /* import card */
+  .import-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .file-btn{border:1px dashed var(--border);background:#fffdf9;color:var(--text);font-size:13px;padding:9px 14px;border-radius:8px;cursor:pointer;}
+  .file-btn:hover{border-color:var(--accent);}
+  .import-status{font-size:12px;color:var(--text-muted);}
+  .import-status.err{color:var(--danger);}
+  .import-status.ok{color:#059669;}
+  .support-summary{margin-top:14px;font-size:12px;border-top:1px solid var(--border);padding-top:12px;}
+  .support-summary table{min-width:0;width:100%;}
+  .support-summary th{background:var(--navy-pale);color:var(--navy);font-size:11px;padding:6px 8px;text-align:left;position:static;}
+  .support-summary td{padding:6px 8px;font-size:12px;border-bottom:1px solid var(--border);text-align:left;}
+  .warn-tag{display:inline-block;background:#fef2f2;color:var(--danger);font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-top:8px;}
+</style>
+</head>
+<body>
+
+<button class="drawer-tab" id="drawerTab">年度目標設定</button>
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h2>2026年度 目標營業額（含稅）</h2>
+    <button class="drawer-close" id="drawerClose">✕</button>
+  </div>
+  <div class="drawer-sub">切換主頁「分配月份」時會自動帶入這裡設定的含稅金額；未填寫則預設為 0，可再自行調整。</div>
+  <div id="annualList"></div>
+  <div class="drawer-note">此設定只列出 2026年8月〜12月（不回溯更早的月份），資料儲存在這台瀏覽器裡。</div>
+</div>
+
+<div class="wrap">
+
+  <div class="head">
+    <div>
+      <div class="eyebrow">Beutii · 門市業務工具</div>
+      <h1>業務績效分配系統</h1>
+      <div class="sub">依排班數與職務加權比重，自動分配每人應達成之當月業績目標</div>
+    </div>
+    <div class="month-box">
+      <label for="monthInput">分配月份</label>
+      <input type="month" id="monthInput">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">1</span>當月目標營業額</h2>
+    <div class="target-grid">
+      <div class="field">
+        <label for="untaxedInput">未稅金額</label>
+        <div class="money"><span>$</span><input type="number" id="untaxedInput" step="1"></div>
+      </div>
+      <div class="field">
+        <label for="rateInput">稅率 (%)</label>
+        <input type="number" id="rateInput" step="0.1">
+      </div>
+      <div class="field">
+        <label for="taxedInput">含稅金額</label>
+        <div class="money"><span>$</span><input type="number" id="taxedInput" step="1"></div>
+      </div>
+      <div class="field">
+        <label>分配基準</label>
+        <div class="basis-toggle">
+          <button type="button" id="basisUntaxed">未稅金額</button>
+          <button type="button" id="basisTaxed">含稅金額</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span>匯入班表（自動計算排班數）</h2>
+    <div class="import-row">
+      <label class="file-btn" for="scheduleFile">選擇班表 Excel 檔（.xlsx）</label>
+      <input type="file" id="scheduleFile" accept=".xlsx,.xls" style="display:none">
+      <span class="import-status" id="importStatus">尚未匯入</span>
+    </div>
+    <div id="supportSummary" class="support-summary" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">3</span>業務員排班與業績分配</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>業務員</th>
+            <th>正常班<br><span style="font-weight:400;opacity:.75">(×1)</span></th>
+            <th>半天班<br><span style="font-weight:400;opacity:.75">(×0.5)</span></th>
+            <th>全天班<br><span style="font-weight:400;opacity:.75">(×1.5)</span></th>
+            <th>排班合計</th>
+            <th>職務加權比重</th>
+            <th>最終權重</th>
+            <th>分配業績</th>
+            <th>佔比</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot>
+          <tr>
+            <td>加總</td>
+            <td id="fNormal">0</td>
+            <td id="fHalf">0</td>
+            <td id="fFull">0</td>
+            <td id="fShift">0</td>
+            <td>—</td>
+            <td id="fWeight">0</td>
+            <td id="fAlloc">$0</td>
+            <td id="fRatio">100%</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="row-actions">
+      <button class="add-btn" id="addBtn">＋ 新增業務員</button>
+    </div>
+    <div class="formula-note">
+      <div><b>排班合計</b> = 正常班數 ×1 ＋ 半天班數 ×0.5 ＋ 全天班數 ×1.5</div>
+      <div><b>最終權重</b> = 排班合計 × 職務加權比重</div>
+      <div><b>分配業績</b> = 目標金額 ×（該人最終權重 ÷ 全體最終權重加總），分配金額四捨五入後仍會加總等於目標金額</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="save-bar">
+      <div class="left">
+        <button class="btn btn-primary" id="saveBtn">儲存本月資料</button>
+        <select class="hist" id="histSelect"><option value="">載入歷史月份…</option></select>
+        <button class="btn btn-ghost" id="resetBtn">重設為預設 5 人</button>
+      </div>
+      <div class="status" id="statusText">尚未儲存</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const fmt = n => '$' + Math.round(n).toLocaleString('zh-Hant');
+  const fmtNum = n => (Math.round(n*100)/100).toLocaleString('zh-Hant');
+
+  const now = new Date();
+  const defaultMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+
+  let state = {
+    month: defaultMonth,
+    untaxed: 0,
+    rate: 5,
+    basis: 'untaxed',
+    employees: [
+      {id:1,name:'業務員1',normal:0,half:0,full:0,weight:1},
+      {id:2,name:'業務員2',normal:0,half:0,full:0,weight:1},
+      {id:3,name:'業務員3',normal:0,half:0,full:0,weight:1},
+      {id:4,name:'業務員4',normal:0,half:0,full:0,weight:1},
+      {id:5,name:'業務員5',normal:0,half:0,full:0,weight:1},
+    ]
+  };
+  let nextId = 6;
+
+  // ---------- 年度目標營業額（含稅）設定 ----------
+  const ANNUAL_MONTHS = ['2026-08','2026-09','2026-10','2026-11','2026-12'];
+  const ANNUAL_KEY = 'annualTargets:2026';
+
+  function loadAnnualTargets(){
+    try{
+      const raw = localStorage.getItem(ANNUAL_KEY);
+      return raw ? JSON.parse(raw) : {};
+    }catch(err){ console.error('讀取年度目標失敗', err); return {}; }
+  }
+  function saveAnnualTargets(obj){
+    try{ localStorage.setItem(ANNUAL_KEY, JSON.stringify(obj)); return true; }
+    catch(err){ console.error('儲存年度目標失敗', err); return false; }
+  }
+
+  function renderAnnualList(){
+    const targets = loadAnnualTargets();
+    const list = $('annualList');
+    list.innerHTML = '';
+    ANNUAL_MONTHS.forEach(m=>{
+      const [y,mm] = m.split('-');
+      const row = document.createElement('div');
+      row.className = 'drawer-row';
+      row.innerHTML = `
+        <label>${y}年${Number(mm)}月</label>
+        <div class="money"><span>$</span><input type="number" step="1" data-month="${m}" value="${targets[m] ?? ''}" placeholder="0"></div>
+      `;
+      list.appendChild(row);
+    });
+    list.querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('input', e=>{
+        const t = loadAnnualTargets();
+        const v = e.target.value;
+        if(v === ''){ delete t[e.target.dataset.month]; } else { t[e.target.dataset.month] = Number(v); }
+        saveAnnualTargets(t);
+        if(e.target.dataset.month === state.month){
+          syncTargetFromAnnual(state.month, false);
+        }
+      });
+    });
+  }
+
+  // 依年度設定帶入目標營業額（含稅為來源）；找不到設定則預設 0
+  function syncTargetFromAnnual(month, rerender){
+    const targets = loadAnnualTargets();
+    const taxed = targets[month] ?? 0;
+    state.untaxed = state.rate > -100 ? taxed / (1 + state.rate/100) : 0;
+    markUnsaved();
+    if(rerender !== false) render();
+  }
+
+  $('drawerTab').addEventListener('click', ()=>{
+    $('drawer').classList.add('open');
+    $('drawerOverlay').classList.add('open');
+    renderAnnualList();
+  });
+  function closeDrawer(){
+    $('drawer').classList.remove('open');
+    $('drawerOverlay').classList.remove('open');
+  }
+  $('drawerClose').addEventListener('click', closeDrawer);
+  $('drawerOverlay').addEventListener('click', closeDrawer);
+
+  function taxedAmount(){
+    return state.untaxed * (1 + state.rate/100);
+  }
+
+  function computeRows(){
+    const base = state.basis === 'untaxed' ? state.untaxed : taxedAmount();
+    const rows = state.employees.map(e=>{
+      const shiftTotal = (Number(e.normal)||0)*1 + (Number(e.half)||0)*0.5 + (Number(e.full)||0)*1.5;
+      const finalWeight = shiftTotal * (Number(e.weight)||0);
+      return {...e, shiftTotal, finalWeight};
+    });
+    const totalWeight = rows.reduce((s,r)=>s+r.finalWeight,0);
+
+    // raw allocation + largest remainder rounding so sum === base exactly
+    let raw = rows.map(r => totalWeight>0 ? base * (r.finalWeight/totalWeight) : 0);
+    let floors = raw.map(v=>Math.floor(v));
+    let remainder = Math.round(base - floors.reduce((s,v)=>s+v,0));
+    let fracIdx = raw.map((v,i)=>({i, frac:v-Math.floor(v)})).sort((a,b)=>b.frac-a.frac);
+    let alloc = floors.slice();
+    for(let k=0;k<remainder && k<fracIdx.length;k++){ alloc[fracIdx[k].i]++; }
+
+    return rows.map((r,i)=>({...r, alloc: alloc[i]||0, ratio: totalWeight>0 ? r.finalWeight/totalWeight*100 : 0, base}));
+  }
+
+  function render(){
+    $('monthInput').value = state.month;
+    $('untaxedInput').value = state.untaxed;
+    $('rateInput').value = state.rate;
+    $('taxedInput').value = Math.round(taxedAmount());
+    $('basisUntaxed').classList.toggle('active', state.basis==='untaxed');
+    $('basisTaxed').classList.toggle('active', state.basis==='taxed');
+
+    const rows = computeRows();
+    const tbody = $('tbody');
+    tbody.innerHTML = '';
+    rows.forEach(r=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="text" value="${r.name}" data-id="${r.id}" data-field="name"></td>
+        <td><input type="number" min="0" step="1" value="${r.normal}" data-id="${r.id}" data-field="normal"></td>
+        <td><input type="number" min="0" step="1" value="${r.half}" data-id="${r.id}" data-field="half"></td>
+        <td><input type="number" min="0" step="1" value="${r.full}" data-id="${r.id}" data-field="full"></td>
+        <td class="readonly">${fmtNum(r.shiftTotal)}</td>
+        <td><input type="number" min="0" step="0.1" value="${r.weight}" data-id="${r.id}" data-field="weight"></td>
+        <td class="readonly">${fmtNum(r.finalWeight)}</td>
+        <td class="alloc">${fmt(r.alloc)}</td>
+        <td>
+          <div class="ratio-cell">
+            <span>${r.ratio.toFixed(1)}%</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.min(r.ratio,100)}%"></div></div>
+          </div>
+        </td>
+        <td><button class="del-btn" data-id="${r.id}" title="刪除">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // totals
+    const sumNormal = rows.reduce((s,r)=>s+(Number(r.normal)||0),0);
+    const sumHalf = rows.reduce((s,r)=>s+(Number(r.half)||0),0);
+    const sumFull = rows.reduce((s,r)=>s+(Number(r.full)||0),0);
+    const sumShift = rows.reduce((s,r)=>s+r.shiftTotal,0);
+    const sumWeight = rows.reduce((s,r)=>s+r.finalWeight,0);
+    const sumAlloc = rows.reduce((s,r)=>s+r.alloc,0);
+    $('fNormal').textContent = fmtNum(sumNormal);
+    $('fHalf').textContent = fmtNum(sumHalf);
+    $('fFull').textContent = fmtNum(sumFull);
+    $('fShift').textContent = fmtNum(sumShift);
+    $('fWeight').textContent = fmtNum(sumWeight);
+    $('fAlloc').textContent = fmt(sumAlloc);
+    $('fRatio').textContent = '100%';
+
+    bindRowEvents();
+  }
+
+  function bindRowEvents(){
+    $('tbody').querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('input', e=>{
+        const id = Number(e.target.dataset.id);
+        const field = e.target.dataset.field;
+        const emp = state.employees.find(x=>x.id===id);
+        if(!emp) return;
+        emp[field] = field==='name' ? e.target.value : Number(e.target.value);
+        markUnsaved();
+        renderKeepFocus(e.target);
+      });
+    });
+    $('tbody').querySelectorAll('.del-btn').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        const id = Number(e.target.dataset.id);
+        if(state.employees.length<=1) return;
+        state.employees = state.employees.filter(x=>x.id!==id);
+        markUnsaved();
+        render();
+      });
+    });
+  }
+
+  // re-render but keep caret focus behaviour reasonable for text/number typing
+  function renderKeepFocus(el){
+    const id = el.dataset.id, field = el.dataset.field;
+    render();
+    const again = document.querySelector(`[data-id="${id}"][data-field="${field}"]`);
+    if(again){ again.focus(); if(again.type==='text'){ const v=again.value; again.value=''; again.value=v; } }
+  }
+
+  function markUnsaved(){
+    const st = $('statusText');
+    st.textContent = '尚未儲存';
+    st.classList.remove('ok');
+  }
+
+  $('untaxedInput').addEventListener('input', e=>{ state.untaxed = Number(e.target.value)||0; markUnsaved(); render(); });
+  $('rateInput').addEventListener('input', e=>{ state.rate = Number(e.target.value)||0; markUnsaved(); render(); });
+  $('taxedInput').addEventListener('input', e=>{
+    const taxed = Number(e.target.value)||0;
+    state.untaxed = state.rate>-100 ? taxed/(1+state.rate/100) : 0;
+    markUnsaved(); render();
+  });
+  $('basisUntaxed').addEventListener('click', ()=>{ state.basis='untaxed'; markUnsaved(); render(); });
+  $('basisTaxed').addEventListener('click', ()=>{ state.basis='taxed'; markUnsaved(); render(); });
+  $('monthInput').addEventListener('change', e=>{
+    state.month = e.target.value;
+    syncTargetFromAnnual(state.month, false);
+    markUnsaved();
+    loadHistorySelect();
+    render();
+  });
+
+  $('addBtn').addEventListener('click', ()=>{
+    state.employees.push({id:nextId, name:'業務員'+nextId, normal:0, half:0, full:0, weight:1});
+    nextId++;
+    markUnsaved();
+    render();
+  });
+
+  $('resetBtn').addEventListener('click', ()=>{
+    state.employees = [1,2,3,4,5].map(n=>({id:n,name:'業務員'+n,normal:0,half:0,full:0,weight:1}));
+    nextId = 6;
+    markUnsaved();
+    render();
+  });
+
+  // ---------- 班表匯入 ----------
+  const SHIFT_KEYWORDS = ['早+','PT','早','晚','半','全'];
+  const SHIFT_WEIGHT = {'早':1,'早+':1,'晚':1,'半':0.5,'全':1.5};
+  const LEAVE_QUALIFIERS = new Set(['喪假','年假','生日假']);
+  const UNRESOLVED_NAME = '異常支援待確認';
+
+  function classifyShiftText(first){
+    for(const kw of SHIFT_KEYWORDS){
+      if(first === kw) return {prefix:'', kw};
+      if(first.endsWith(' '+kw)) return {prefix:first.slice(0,-(kw.length+1)).trim(), kw};
+      if(first.endsWith(kw)) return {prefix:first.slice(0,-kw.length).trim(), kw};
+    }
+    return {prefix:first, kw:null};
+  }
+
+  function cellAt(sheet, r, c){
+    const addr = XLSX.utils.encode_cell({r:r-1, c:c-1});
+    const cell = sheet[addr];
+    return cell ? cell.v : null;
+  }
+
+  function parseSchedule(sheet, year, month){
+    const range = XLSX.utils.decode_range(sheet['!ref']);
+    const maxRow = range.e.r+1, maxCol = range.e.c+1;
+
+    let dateRow = -1;
+    for(let r=1; r<=Math.min(maxRow,15); r++){
+      let cnt=0;
+      for(let c=1;c<=maxCol;c++){ if(cellAt(sheet,r,c) instanceof Date) cnt++; }
+      if(cnt>=5){ dateRow=r; break; }
+    }
+    if(dateRow===-1) throw new Error('在這張工作表裡找不到日期列，請確認格式是否跟原本班表一致');
+
+    const dateCols = [];
+    for(let c=1;c<=maxCol;c++){
+      const v = cellAt(sheet,dateRow,c);
+      if(v instanceof Date && v.getFullYear()===year && (v.getMonth()+1)===month) dateCols.push(c);
+    }
+    if(dateCols.length===0) throw new Error('這張工作表裡沒有找到 ' + year + '年' + month + '月 的日期欄位');
+
+    // 掃描門市區塊 / 員工列 / 支援列
+    const employeeRows = [];
+    const supportRows = [];
+    let currentStore = null;
+    for(let r=dateRow+1; r<=maxRow; r++){
+      const a = cellAt(sheet,r,1);
+      const b = cellAt(sheet,r,2);
+      if(a===null || String(a).trim()==='') continue;
+      const aStr = String(a).trim();
+      if(aStr === '各店任務') continue;
+      if(b===null || String(b).trim()===''){
+        currentStore = aStr;
+        continue;
+      }
+      const bStr = String(b).trim();
+      if(aStr === '支援'){
+        supportRows.push({row:r, store:currentStore});
+      } else {
+        employeeRows.push({row:r, role:aStr, name:bStr, store:currentStore});
+      }
+    }
+
+    const canonicalNames = [...new Set(employeeRows.map(e=>e.name))];
+    function resolveAlias(name){
+      if(canonicalNames.includes(name)) return name;
+      const matches = [...new Set(canonicalNames.filter(n =>
+        Math.min(n.length,name.length) >= 2 && (n.includes(name) || name.includes(n))
+      ))];
+      return matches.length===1 ? matches[0] : null;
+    }
+
+    const people = {};
+    const unresolved = [];
+    function ensure(name){
+      if(!people[name]) people[name] = {normal:0, half:0, full:0, stores:{}};
+      return people[name];
+    }
+    function addShift(name, kw, storeLabel){
+      const w = SHIFT_WEIGHT[kw];
+      const p = ensure(name);
+      if(w===1) p.normal++; else if(w===0.5) p.half++; else if(w===1.5) p.full++;
+      if(!p.stores[storeLabel]) p.stores[storeLabel] = {normal:0, half:0, full:0};
+      if(w===1) p.stores[storeLabel].normal++;
+      else if(w===0.5) p.stores[storeLabel].half++;
+      else if(w===1.5) p.stores[storeLabel].full++;
+    }
+
+    employeeRows.forEach(er=>{
+      ensure(er.name);
+      dateCols.forEach(c=>{
+        const v = cellAt(sheet, er.row, c);
+        if(v===null) return;
+        const text = String(v).trim();
+        if(text==='' || !text.includes('\n')) return; // 無時段 = 未排班/請假標籤，不計班數
+        const first = text.split('\n')[0].trim();
+        const {prefix, kw} = classifyShiftText(first);
+        if(kw===null || kw==='PT') return;       // 規則1：PT 忽略
+        if(LEAVE_QUALIFIERS.has(prefix)) return;  // 規則2：請假併班不算班
+        addShift(er.name, kw, prefix || er.store);
+      });
+    });
+
+    supportRows.forEach(sr=>{
+      dateCols.forEach(c=>{
+        const v = cellAt(sheet, sr.row, c);
+        if(v===null) return;
+        const text = String(v).trim();
+        if(text==='' || text==='x' || !text.includes('\n')) return;
+        const first = text.split('\n')[0].trim();
+        const {prefix, kw} = classifyShiftText(first);
+        if(kw===null || kw==='PT') return;
+        if(LEAVE_QUALIFIERS.has(prefix)) return;
+        if(prefix===''){
+          // 規則3+使用者指示：支援班次沒有指名 → 異常支援待確認
+          unresolved.push({store:sr.store, text});
+          addShift(UNRESOLVED_NAME, kw, sr.store);
+          return;
+        }
+        const resolved = resolveAlias(prefix) || prefix; // 暱稱含2字以上重疊視為同一人
+        addShift(resolved, kw, sr.store); // 規則3：只計入支援門市，不計回原門市
+      });
+    });
+
+    return {people, unresolved, canonicalNames};
+  }
+
+  function applyParsedToEmployees(result){
+    const names = Object.keys(result.people);
+    names.forEach(name=>{
+      const p = result.people[name];
+      let emp = state.employees.find(x=>x.name===name);
+      if(!emp){
+        emp = {id:nextId++, name, normal:0, half:0, full:0, weight:1};
+        state.employees.push(emp);
+      }
+      emp.normal = p.normal;
+      emp.half = p.half;
+      emp.full = p.full;
+    });
+  }
+
+  function renderSupportSummary(result){
+    const box = $('supportSummary');
+    const names = Object.keys(result.people).sort();
+
+    // 收集所有出現過的門市/品牌，依總班數由高到低排序
+    const storeTotals = {};
+    names.forEach(name=>{
+      const p = result.people[name];
+      Object.entries(p.stores).forEach(([label, b])=>{
+        storeTotals[label] = (storeTotals[label]||0) + b.normal + b.half + b.full;
+      });
+    });
+    const storeLabels = Object.keys(storeTotals).sort((a,b)=>storeTotals[b]-storeTotals[a]);
+
+    function cellHtml(b){
+      if(!b || (b.normal+b.half+b.full)===0) return '<span style="color:var(--text-muted)">❌</span>';
+      const parts = [];
+      if(b.normal) parts.push('正'+b.normal);
+      if(b.half) parts.push('半'+b.half);
+      if(b.full) parts.push('全'+b.full);
+      return `<span style="color:#059669;font-weight:700;">✅</span> ${parts.join(' ')}`;
+    }
+
+    const headCols = storeLabels.map(s=>`<th>${s}</th>`).join('');
+    let rows = names.map(name=>{
+      const p = result.people[name];
+      const highlight = name===UNRESOLVED_NAME ? ' style="color:var(--danger);font-weight:700;"' : '';
+      const storeCells = storeLabels.map(s=>`<td>${cellHtml(p.stores[s])}</td>`).join('');
+      return `<tr><td${highlight}>${name}</td><td>${p.normal}</td><td>${p.half}</td><td>${p.full}</td>${storeCells}</tr>`;
+    }).join('');
+    let warn = '';
+    if(result.unresolved.length){
+      warn = `<div class="warn-tag">有 ${result.unresolved.length} 筆支援班次沒有指名，已列在「${UNRESOLVED_NAME}」，請自行確認人員後手動調整</div>`;
+    }
+    box.innerHTML = `
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>姓名</th><th>正常班</th><th>半天班</th><th>全天班</th>${headCols}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      ${warn}
+    `;
+    box.style.display = 'block';
+  }
+
+  $('scheduleFile').addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const statusEl = $('importStatus');
+    statusEl.textContent = '解析中…';
+    statusEl.className = 'import-status';
+    try{
+      if(typeof XLSX === 'undefined') throw new Error('解析套件尚未載入，請確認網路連線後重新整理頁面');
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array', cellDates:true});
+      const [y, m] = state.month.split('-').map(Number);
+      const sheetName = wb.SheetNames.includes('' + y + String(m).padStart(2,'0'))
+        ? '' + y + String(m).padStart(2,'0') : null;
+      if(!sheetName) throw new Error('找不到對應「' + state.month + '」的工作表（預期分頁名稱如 ' + y + String(m).padStart(2,'0') + '）');
+      const result = parseSchedule(wb.Sheets[sheetName], y, m);
+      applyParsedToEmployees(result);
+      markUnsaved();
+      render();
+      renderSupportSummary(result);
+      statusEl.textContent = '已匯入並套用「' + sheetName + '」工作表的排班數 ✓';
+      statusEl.className = 'import-status ok';
+    }catch(err){
+      console.error('班表匯入錯誤', err);
+      statusEl.textContent = '匯入失敗：' + err.message;
+      statusEl.className = 'import-status err';
+    }
+  });
+
+  // 本機儲存（存在使用者當下瀏覽器中，適合部署到 Netlify 等外部網址使用）
+  const store = {
+    set(key, value){
+      try{ localStorage.setItem(key, value); return true; }
+      catch(err){ console.error('儲存錯誤', err); return false; }
+    },
+    get(key){
+      try{ return localStorage.getItem(key); }
+      catch(err){ console.error('讀取錯誤', err); return null; }
+    },
+    listKeys(prefix){
+      try{
+        return Object.keys(localStorage).filter(k=>k.startsWith(prefix));
+      }catch(err){ console.error('列表錯誤', err); return []; }
+    }
+  };
+
+  $('saveBtn').addEventListener('click', ()=>{
+    const key = 'payroll:' + state.month;
+    const ok = store.set(key, JSON.stringify(state));
+    const st = $('statusText');
+    if(ok){
+      st.textContent = '已儲存 ✓ (' + state.month + ')';
+      st.classList.add('ok');
+      loadHistorySelect();
+    } else {
+      st.textContent = '儲存失敗，這台瀏覽器可能停用了本機儲存';
+      st.classList.remove('ok');
+    }
+  });
+
+  $('histSelect').addEventListener('change', (e)=>{
+    const month = e.target.value;
+    if(!month) return;
+    const raw = store.get('payroll:' + month);
+    const st = $('statusText');
+    if(raw){
+      state = JSON.parse(raw);
+      nextId = Math.max(1, ...state.employees.map(x=>x.id)) + 1;
+      st.textContent = '已載入 ' + month + ' 資料';
+      st.classList.add('ok');
+      render();
+    } else {
+      st.textContent = '找不到該月份資料';
+      st.classList.remove('ok');
+    }
+  });
+
+  function loadHistorySelect(){
+    const sel = $('histSelect');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">載入歷史月份…</option>';
+    const months = store.listKeys('payroll:').map(k=>k.replace('payroll:','')).sort().reverse();
+    months.forEach(m=>{
+      const opt = document.createElement('option');
+      opt.value = m; opt.textContent = m;
+      sel.appendChild(opt);
+    });
+    sel.value = current;
+  }
+
+  function init(){
+    const months = store.listKeys('payroll:').map(k=>k.replace('payroll:','')).sort().reverse();
+    let loadedSaved = false;
+    if(months.length){
+      const raw = store.get('payroll:' + months[0]);
+      if(raw){
+        state = JSON.parse(raw);
+        nextId = Math.max(1, ...state.employees.map(x=>x.id)) + 1;
+        loadedSaved = true;
+      }
+    }
+    if(!loadedSaved){
+      syncTargetFromAnnual(state.month, false);
+    }
+    render();
+    loadHistorySelect();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
