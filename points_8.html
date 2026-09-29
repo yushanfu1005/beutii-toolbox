@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>點數預扣登記表 - Beutii 門市工具箱</title>
+<style>
+:root{
+  /* Beutii 門市工具箱主配色（金褐＋深藏青＋米白） */
+  --navy-950:#16233a;
+  --navy-900:#1c2c47;
+  --navy-800:#253a5c;
+  --navy-700:#3a5170;
+  --navy-600:#66788e;
+  --navy-500:#8a97a8;
+  --blue-accent:#bd8a44;
+  --blue-accent-d:#a5762f;
+  --gold-soft:#f2e4cc;
+  --ink:#20241f;
+  --ink-soft:#6b6f66;
+  --line:#e4e0d6;
+  --line-soft:#eeece2;
+  --bg:#f6f4ef;
+  --card:#ffffff;
+  --green:#1f8a5f;
+  --green-bg:#e5f5ee;
+  --amber:#b8790a;
+  --amber-bg:#fbf0dd;
+  --red:#c0392b;
+  --red-bg:#fbe9e7;
+  --table-head-bg:#453829;
+  --shadow:0 1px 2px rgba(30,35,25,0.07),0 4px 14px rgba(30,35,25,0.08);
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:60px;
+  overflow-x:auto;
+}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";}
+::selection{background:#c7d1da;}
+
+/* ---------- Store bar (門市選擇) — 米色系，位於標題下方 ---------- */
+.storebar{
+  background:var(--gold-soft);border-bottom:1px solid var(--line);
+  padding:8px 20px;
+}
+.storebar-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.storebar-label{font-size:11.5px;font-weight:700;color:var(--ink-soft);flex:0 0 auto;}
+.store-tabs{display:flex;gap:6px;flex-wrap:wrap;flex:1;}
+.store-tab{
+  display:inline-flex;align-items:center;gap:4px;
+  border:1px solid var(--line);background:#fff;color:var(--ink-soft);font-weight:700;font-size:12.5px;
+  padding:5px 10px 5px 13px;border-radius:999px;cursor:default;font-family:inherit;
+}
+.store-tab.active{background:var(--blue-accent);border-color:var(--blue-accent);color:#fff;}
+.store-tab-add{
+  border:1px dashed var(--line);background:transparent;color:var(--ink-soft);font-weight:600;font-size:12px;
+  padding:5px 12px;border-radius:999px;cursor:pointer;font-family:inherit;
+}
+.store-tab-add:hover{border-color:var(--blue-accent);color:var(--blue-accent-d);}
+.store-tab-name{cursor:pointer;}
+.store-tab-del{
+  border:none;background:transparent;color:inherit;opacity:.5;font-size:10.5px;cursor:pointer;
+  padding:0 2px;font-family:inherit;line-height:1;
+}
+.store-tab-del:hover{opacity:1;color:var(--red);}
+.store-tab.active .store-tab-del{color:rgba(255,255,255,0.85);}
+.store-tab.active .store-tab-del:hover{color:#fff;}
+
+/* ---------- Top bar (title) — 白底，跟工具箱主頁一致 ---------- */
+.topbar{
+  background:var(--card);
+  color:var(--ink);
+  border-bottom:1px solid var(--line);
+  padding:14px 20px;
+}
+.topbar-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.topbar h1{margin:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:6px;color:var(--navy-900);}
+.topbar .desc{margin:3px 0 0;font-size:11.5px;color:var(--ink-soft);}
+.topbar-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.btn{
+  border:none;border-radius:8px;padding:9px 14px;font-size:13.5px;font-weight:600;
+  cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  font-family:inherit;transition:transform .08s ease,opacity .15s ease,background .15s ease;
+  white-space:nowrap;
+}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:var(--blue-accent);color:#fff;}
+.btn-primary:hover{background:var(--blue-accent-d);}
+.btn-ghost{background:rgba(255,255,255,0.1);color:#fff;}
+.btn-ghost:hover{background:rgba(255,255,255,0.18);}
+.btn-light{background:#fff;color:var(--navy-800);border:1px solid var(--line);}
+.btn-light:hover{background:#f2f6f9;}
+.btn-danger{background:var(--red-bg);color:var(--red);}
+.btn-danger:hover{background:#f8d9d4;}
+.btn-sm{padding:6px 10px;font-size:12.5px;border-radius:7px;}
+.btn-xs{padding:5px 9px;font-size:11px;border-radius:6px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* ---------- Page container ---------- */
+.page{max-width:1180px;margin:0 auto;padding:0 20px;}
+
+.summary-block{padding-top:16px;padding-bottom:4px;}
+.stats-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;
+}
+.stat-card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px 14px;box-shadow:var(--shadow);
+}
+.stat-label{font-size:11.5px;color:var(--ink-soft);margin-bottom:5px;}
+.stat-value{font-size:20px;font-weight:700;color:var(--navy-900);}
+.stat-value small{font-size:12px;font-weight:600;color:var(--ink-soft);margin-left:2px;}
+
+.below-fold{padding-top:16px;}
+
+/* ---------- Filter bar (STICKY) ---------- */
+.filter-bar{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  position:sticky;top:0;z-index:37;background:var(--bg);
+  padding:10px 0;margin-bottom:2px;
+  box-shadow:0 6px 10px -8px rgba(22,35,58,0.18);
+}
+.filter-bar select,.filter-bar input[type=text],.filter-bar input[type=date]{
+  font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);
+  border-radius:7px;background:#fff;color:var(--ink);
+}
+.filter-spacer{flex:1;}
+.result-count{font-size:12.5px;color:var(--ink-soft);}
+
+/* ---------- Table ---------- */
+.table-wrap{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);margin-bottom:22px;margin-top:10px;
+}
+table{width:100%;border-collapse:collapse;min-width:1080px;}
+thead th{
+  position:sticky;top:var(--thead-top,0px);background:var(--table-head-bg);color:#dfeaf3;
+  font-size:12px;font-weight:600;text-align:left;padding:10px 12px;
+  white-space:nowrap;z-index:36;
+}
+tbody td{padding:9px 12px;font-size:13px;border-bottom:1px solid var(--line-soft);white-space:nowrap;}
+tbody tr:hover{background:#faf8f2;}
+tbody tr:last-child td{border-bottom:none;}
+td.amount{text-align:right;font-weight:600;color:var(--navy-900);}
+td.center{text-align:center;}
+.chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;color:#fff;margin-right:3px;}
+.bool-chip{border:none;font-family:inherit;font-size:11.5px;font-weight:700;padding:3px 11px;border-radius:999px;cursor:pointer;}
+.bool-chip.on{background:var(--green-bg);color:var(--green);}
+.bool-chip.off{background:var(--line-soft);color:var(--ink-soft);}
+.bool-chip:hover{filter:brightness(0.97);}
+.status-tag{
+  display:inline-block;border:none;font-family:inherit;font-size:10.5px;font-weight:700;
+  padding:2px 8px;border-radius:999px;cursor:pointer;vertical-align:middle;
+}
+.status-tag.tag-ship{background:#e6eaee;color:var(--navy-700);}
+.status-tag.tag-pickup{background:var(--amber-bg);color:var(--amber);}
+.status-tag.tag-done{background:var(--green-bg);color:var(--green);}
+.status-tag:hover{filter:brightness(0.95);}
+.price-tag{
+  display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;
+  background:var(--line-soft);color:var(--ink-soft);vertical-align:middle;
+}
+.row-actions{display:flex;gap:6px;}
+.icon-btn{
+  border:none;background:transparent;cursor:pointer;color:var(--ink-soft);font-size:14px;padding:4px 6px;border-radius:6px;
+}
+.icon-btn:hover{background:var(--line-soft);color:var(--navy-800);}
+.icon-btn.del:hover{background:var(--red-bg);color:var(--red);}
+.empty-row td{text-align:center;color:var(--ink-soft);padding:34px 12px;font-size:13.5px;white-space:normal;}
+.items-list{font-size:12.5px;color:var(--ink-soft);white-space:normal;max-width:280px;}
+.item-line{display:block;margin-bottom:2px;}
+.item-line:last-child{margin-bottom:0;}
+
+.footer-actions{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:30px;}
+.footnote{font-size:11.5px;color:var(--ink-soft);}
+
+/* ---------- Modal ---------- */
+.overlay{
+  position:fixed;inset:0;background:rgba(22,35,58,0.5);display:none;
+  align-items:flex-start;justify-content:center;z-index:100;padding:6vh 16px;overflow-y:auto;
+}
+.overlay.show{display:flex;}
+.modal{
+  background:#fff;border-radius:14px;width:100%;max-width:480px;box-shadow:0 20px 50px rgba(0,0,0,0.25);
+  animation:pop .15s ease;
+}
+.modal.wide{max-width:600px;}
+@keyframes pop{from{transform:translateY(6px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+.modal-head h2{margin:0;font-size:16px;color:var(--navy-900);}
+.modal-close{border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink-soft);}
+.modal-body{padding:18px 20px;max-height:68vh;overflow-y:auto;}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+.field input[type=text],.field input[type=number],.field input[type=date],.field input[type=tel],.field select{
+  width:100%;font-family:inherit;font-size:13.5px;padding:9px 11px;border:1px solid var(--line);
+  border-radius:8px;background:#fff;color:var(--ink);
+}
+.field input[readonly]{background:var(--line-soft);color:var(--navy-900);font-weight:700;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.field-row.three{grid-template-columns:1fr 1fr 1fr;}
+.hint{font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+.checkline{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink);padding:8px 0;}
+.checkline input{width:16px;height:16px;}
+.member-box{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:14px;}
+.member-box .sub{padding-left:2px;margin-top:2px;}
+
+/* deposit item rows in modal */
+.item-row{display:grid;grid-template-columns:1fr 110px 32px;gap:6px;margin-bottom:8px;align-items:center;}
+.item-row input{width:100%;font-family:inherit;font-size:13px;padding:8px 9px;border:1px solid var(--line);border-radius:7px;}
+.item-remove{border:none;background:var(--red-bg);color:var(--red);border-radius:7px;height:34px;cursor:pointer;font-size:14px;}
+.item-remove:disabled{opacity:.35;cursor:not-allowed;}
+
+/* option manager (settings) */
+.opt-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.opt-item{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;}
+.opt-item input[type=text]{border:none;flex:1;font-size:13px;font-family:inherit;background:transparent;}
+.opt-item input[type=text]:focus{outline:none;}
+.subhead{font-size:12.5px;font-weight:700;color:var(--navy-800);margin:16px 0 8px;}
+.subhead:first-child{margin-top:0;}
+
+/* toast */
+.toast-wrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center;}
+.toast{background:var(--navy-900);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,0.25);opacity:0;transform:translateY(8px);transition:all .2s ease;}
+.toast.show{opacity:1;transform:translateY(0);}
+
+@media(max-width:640px){
+  .field-row,.field-row.three{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div>
+      <h1>🧾 點數預扣登記表</h1>
+      <div class="desc">先為客人預扣點點金，建立「先出貨、後入帳」訂單追蹤</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-light btn-xs" id="btnSettings">⚙️ 設定</button>
+    </div>
+  </div>
+</div>
+
+<div class="storebar">
+  <div class="storebar-inner">
+    <span class="storebar-label">門市</span>
+    <div class="store-tabs" id="storeTabs"></div>
+    <button class="store-tab-add" id="btnAddStore">＋ 新增門市</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="summary-block">
+    <div class="stats-grid" id="statsGrid"></div>
+  </div>
+
+  <div class="below-fold">
+    <div class="filter-bar">
+      <input type="text" id="filterKeyword" placeholder="搜尋商品／訂單編號／業務…">
+      <label class="checkline" style="padding:0;gap:5px;font-size:12.5px;color:var(--ink-soft);font-weight:600;">
+        <input type="checkbox" id="filterShowArchived"> 顯示已結案
+      </label>
+      <div class="filter-spacer"></div>
+      <span class="result-count" id="resultCount"></span>
+      <button class="btn btn-primary btn-sm" id="btnAddOrder">＋ 新增訂單</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr id="tableHeadRow"></tr>
+        </thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+
+    <div class="footer-actions">
+      <span class="footnote">資料儲存在目前這台裝置的瀏覽器裡，不會跨裝置同步。建議固定使用結帳櫃檯同一台電腦/平板開啟、加入書籤即可跨班別共用；請避免清除瀏覽器資料或使用無痕模式。</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Add Store Modal -->
+<div class="overlay" id="overlayStore">
+  <div class="modal">
+    <div class="modal-head"><h2>新增門市</h2><button class="modal-close" data-close="overlayStore">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>門市名稱</label>
+        <input type="text" id="storeNameInput" placeholder="例如：新莊宏匯">
+      </div>
+      <div class="hint">新門市會有獨立的訂單清單，不會跟其他門市互相影響。</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-light btn-sm" data-close="overlayStore">取消</button>
+      <button class="btn btn-primary btn-sm" id="btnSaveStore">新增門市</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Order Modal -->
+<div class="overlay" id="overlayOrder">
+  <div class="modal wide">
+    <div class="modal-head"><h2 id="orderModalTitle">新增訂單</h2><button class="modal-close" data-close="overlayOrder">✕</button></div>
+    <div class="modal-body">
+      <div class="field-row three">
+        <div class="field"><label>付訂日期</label><input type="date" id="oDate"></div>
+        <div class="field"><label>訂單編號</label><input type="text" id="oOrderNo" placeholder="#000000"></div>
+        <div class="field"><label>付款方式</label><select id="oPayment"></select></div>
+      </div>
+
+      <div class="field">
+        <label>商品名稱 / 金額（兩樣商品以上需填寫金額）</label>
+        <div id="itemsContainer"></div>
+        <button class="btn btn-light btn-sm" id="btnAddItem" type="button">＋ 新增商品項目</button>
+      </div>
+
+      <div class="member-box">
+        <label class="checkline" style="padding:0;"><input type="checkbox" id="oLineGiftUsed"> 使用 LINE新會員禮／開卡禮（折 $100）</label>
+        <div class="sub" id="lineGiftCodeWrap" style="display:none;">
+          <input type="text" id="oLineGiftCode" placeholder="核銷碼">
+        </div>
+      </div>
+
+      <div class="field-row three">
+        <div class="field"><label>商品總額</label><input type="number" id="oProductTotal" placeholder="0"></div>
+        <div class="field"><label>扣抵點數</label><input type="number" id="oPointsDeducted" placeholder="0"></div>
+        <div class="field"><label>預付金額（自動計算）</label><input type="text" id="oPrepaidAmount" readonly></div>
+      </div>
+      <div class="hint" style="margin:-8px 0 14px;">商品總額－扣抵點數－LINE新會員禮／開卡禮＝預付金額</div>
+
+      <div class="field-row">
+        <div class="field"><label>取貨方式</label>
+          <select id="oDeliveryStatus">
+            <option value="自取-待取">自取－待取</option>
+            <option value="自取-已取">自取－已取</option>
+            <option value="宅配">宅配</option>
+          </select>
+        </div>
+        <div class="field"><label>業務</label><input type="text" id="oSales" placeholder="工號或姓名"></div>
+      </div>
+
+      <div class="field">
+        <label>載具</label>
+        <input type="text" id="oCarrierNo" placeholder="選填，客人載具號">
+        <div class="hint">建議用載具，避免還要另外付運費寄發票</div>
+      </div>
+
+      <div class="member-box">
+        <label class="checkline" style="padding:0;"><input type="checkbox" id="oBeutiiMember"> Beutii 會員</label>
+        <div class="sub" id="beutiiPhoneWrap" style="display:none;">
+          <input type="tel" id="oBeutiiPhone" placeholder="Beutii 會員電話">
+        </div>
+      </div>
+
+      <div class="member-box">
+        <label class="checkline" style="padding:0;"><input type="checkbox" id="oDeptMember"> 百貨會員</label>
+        <div class="sub" id="deptMemberWrap" style="display:none;">
+          <label class="checkline" style="padding:6px 0;"><input type="checkbox" id="oDeptSamePhone"> 同 Beutii 會員電話</label>
+          <div id="deptPhoneWrap">
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;">百貨會員電話／會員編號</label>
+            <input type="text" id="oDeptPhone" placeholder="電話或會員編號（有些百貨無法用電話反查）">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-light btn-sm" data-close="overlayOrder">取消</button>
+      <button class="btn btn-primary btn-sm" id="btnSaveOrder">儲存訂單</button>
+    </div>
+  </div>
+</div>
+
+<!-- Close Order Modal (結案) -->
+<div class="overlay" id="overlayClose">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-head"><h2>訂單結案</h2><button class="modal-close" data-close="overlayClose">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>結案日期</label><input type="date" id="cDate"></div>
+      <div class="field"><label>處理人</label><input type="text" id="cBy" placeholder="工號或姓名"></div>
+      <div class="hint">結案後這筆訂單會從待辦清單移到「已結案」區，勾選「顯示已結案」即可查看與反查。</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-light btn-sm" data-close="overlayClose">取消</button>
+      <button class="btn btn-primary btn-sm" id="btnConfirmClose">確認結案</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="overlay" id="overlaySettings">
+  <div class="modal">
+    <div class="modal-head"><h2>設定</h2><button class="modal-close" data-close="overlaySettings">✕</button></div>
+    <div class="modal-body">
+      <div class="subhead">付款方式選項</div>
+      <div class="opt-list" id="pmList"></div>
+      <button class="btn btn-light btn-sm" id="btnAddPaymentMethod" type="button">＋ 新增付款方式</button>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary btn-sm" data-close="overlaySettings">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="overlay" id="overlayConfirm">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-head"><h2 id="confirmTitle">確認操作</h2><button class="modal-close" data-close="overlayConfirm">✕</button></div>
+    <div class="modal-body"><p id="confirmMsg" style="font-size:13.5px;color:var(--ink-soft);margin:0;"></p></div>
+    <div class="modal-foot">
+      <button class="btn btn-light btn-sm" data-close="overlayConfirm">取消</button>
+      <button class="btn btn-danger btn-sm" id="btnConfirmOk">確認刪除</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= Constants ================= */
+var STORAGE_KEY = 'beutii_points_tracker_v2';
+var DEFAULT_STORES = ['三創','信義統一','新莊宏匯'];
+var DELIVERY_STATUS_OPTIONS = ['自取-待取','自取-已取','宅配'];
+
+/* ================= State ================= */
+var state = null;
+var editingOrderId = null;
+var editingItems = [];
+var closingOrderId = null;
+var confirmCallback = null;
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+function defaultSettings(){
+  return { paymentMethods:['現金','信用卡','LINE Pay','轉帳'] };
+}
+function newStore(name){
+  return { id: uid(), name: name, orders: [] };
+}
+function defaultState(){
+  var stores = DEFAULT_STORES.map(function(n){ return newStore(n); });
+  return { schemaVersion:2, stores: stores, activeStoreId: stores[0].id, settings: defaultSettings() };
+}
+function computePrepaid(total, deducted, lineGiftUsed){
+  return (Number(total)||0) - (Number(deducted)||0) - (lineGiftUsed ? 100 : 0);
+}
+
+/* ================= Persistence (localStorage only — 單一裝置) ================= */
+function migrateState(raw){
+  if(!raw || typeof raw!=='object') return defaultState();
+  if(!Array.isArray(raw.stores) || !raw.stores.length){ raw.stores = [newStore('三創')]; }
+  raw.stores.forEach(function(s){
+    if(!Array.isArray(s.orders)) s.orders = [];
+    s.orders.forEach(function(o){
+      if(typeof o.archived !== 'boolean') o.archived = false;
+      if(!o.orderNo) o.orderNo = '#000000';
+      if(!Array.isArray(o.items) || !o.items.length){
+        var legacyProduct = o.product || '';
+        var legacyAmount = (o.amount!=null && o.amount!=='') ? o.amount : '';
+        o.items = [{ id: uid(), product: legacyProduct, amount: legacyAmount }];
+      }
+      if(o.productTotal===undefined || o.productTotal===null || o.productTotal===''){
+        o.productTotal = (o.amount!=null && o.amount!=='') ? o.amount : '';
+      }
+      if(o.pointsDeducted===undefined || o.pointsDeducted===null) o.pointsDeducted = '';
+      if(typeof o.lineGiftUsed !== 'boolean') o.lineGiftUsed = false;
+      if(o.lineGiftCode===undefined) o.lineGiftCode = '';
+      o.prepaidAmount = computePrepaid(o.productTotal, o.pointsDeducted, o.lineGiftUsed);
+      if(DELIVERY_STATUS_OPTIONS.indexOf(o.deliveryStatus)===-1){
+        o.deliveryStatus = (o.deliveryType==='宅配') ? '宅配' : '自取-待取';
+      }
+      if(typeof o.beutiiMember !== 'boolean') o.beutiiMember = !!o.member;
+      if(o.beutiiMemberPhone===undefined) o.beutiiMemberPhone = '';
+      if(typeof o.deptMember !== 'boolean') o.deptMember = false;
+      if(typeof o.deptMemberSamePhone !== 'boolean') o.deptMemberSamePhone = true;
+      if(o.deptMemberPhone===undefined) o.deptMemberPhone = '';
+      if(o.carrierNo===undefined) o.carrierNo = '';
+      if(o.closedDate===undefined) o.closedDate = '';
+      if(o.closedBy===undefined) o.closedBy = '';
+      delete o.product; delete o.amount; delete o.member; delete o.deliveryType;
+    });
+  });
+  if(!raw.activeStoreId || !raw.stores.some(function(s){return s.id===raw.activeStoreId;})){
+    raw.activeStoreId = raw.stores[0].id;
+  }
+  if(!raw.settings) raw.settings = defaultSettings();
+  if(!raw.settings.paymentMethods || !raw.settings.paymentMethods.length) raw.settings.paymentMethods = defaultSettings().paymentMethods;
+  return raw;
+}
+function loadState(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultState();
+    return migrateState(JSON.parse(raw));
+  }catch(e){ return defaultState(); }
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e){ toast('儲存失敗，可能是瀏覽器儲存空間已滿或使用無痕模式'); }
+}
+
+/* ================= Helpers ================= */
+function activeStore(){ return state.stores.find(function(s){return s.id===state.activeStoreId;}) || null; }
+function fmtMoney(n){ n = Number(n)||0; return n.toLocaleString('zh-TW'); }
+function fmtDate(d){
+  if(!d) return '—';
+  var parts = d.split('-');
+  if(parts.length!==3) return d;
+  return parts[0]+'/'+Number(parts[1])+'/'+Number(parts[2]);
+}
+function escapeHtml(s){
+  if(s===null||s===undefined) return '';
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function escapeAttr(s){ return escapeHtml(s); }
+function toast(msg){
+  var wrap = document.getElementById('toastWrap');
+  var t = document.createElement('div');
+  t.className='toast';
+  t.textContent = msg;
+  wrap.appendChild(t);
+  requestAnimationFrame(function(){ t.classList.add('show'); });
+  setTimeout(function(){
+    t.classList.remove('show');
+    setTimeout(function(){ wrap.removeChild(t); }, 250);
+  }, 2400);
+}
+function openOverlay(id){ document.getElementById(id).classList.add('show'); }
+function closeOverlay(id){ document.getElementById(id).classList.remove('show'); }
+function fillSelect(sel, options, selected){
+  sel.innerHTML = options.map(function(o){ return '<option value="'+escapeAttr(o)+'">'+escapeHtml(o)+'</option>'; }).join('');
+  if(selected!==undefined) sel.value = selected;
+}
+function deliveryTagClass(s){
+  if(s==='自取-已取') return 'tag-done';
+  if(s==='自取-待取') return 'tag-pickup';
+  return 'tag-ship';
+}
+function showConfirm(title, msg, cb, opts){
+  opts = opts || {};
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent = msg;
+  var okBtn = document.getElementById('btnConfirmOk');
+  okBtn.textContent = opts.okLabel || '確認刪除';
+  okBtn.className = 'btn btn-sm ' + (opts.okClass || 'btn-danger');
+  confirmCallback = cb;
+  openOverlay('overlayConfirm');
+}
+document.getElementById('btnConfirmOk').onclick = function(){
+  closeOverlay('overlayConfirm');
+  if(confirmCallback){ confirmCallback(); confirmCallback=null; }
+};
+Array.prototype.forEach.call(document.querySelectorAll('[data-close]'), function(btn){
+  btn.onclick = function(){ closeOverlay(btn.getAttribute('data-close')); };
+});
+
+/* ================= Render: Store tabs ================= */
+function renderStoreTabs(){
+  var bar = document.getElementById('storeTabs');
+  bar.innerHTML='';
+  state.stores.forEach(function(st){
+    var wrap = document.createElement('span');
+    wrap.className = 'store-tab' + (st.id===state.activeStoreId ? ' active' : '');
+    var nameEl = document.createElement('span');
+    nameEl.className = 'store-tab-name';
+    nameEl.textContent = st.name;
+    nameEl.onclick = function(){ state.activeStoreId = st.id; saveState(); renderAll(); };
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'store-tab-del';
+    delBtn.title = '刪除門市';
+    delBtn.textContent = '✕';
+    delBtn.onclick = function(e){
+      e.stopPropagation();
+      if(state.stores.length<=1){ toast('至少要保留一個門市'); return; }
+      showConfirm(
+        '刪除門市',
+        '確定要刪除門市「'+st.name+'」嗎？這會一併刪除這個門市底下所有訂單資料，且無法復原。',
+        function(){
+          state.stores = state.stores.filter(function(x){return x.id!==st.id;});
+          if(state.activeStoreId===st.id){ state.activeStoreId = state.stores[0].id; }
+          saveState(); renderAll();
+          toast('已刪除門市「'+st.name+'」');
+        }
+      );
+    };
+    wrap.appendChild(nameEl);
+    wrap.appendChild(delBtn);
+    bar.appendChild(wrap);
+  });
+}
+
+/* ================= Render: Stats ================= */
+function renderStats(){
+  var store = activeStore();
+  var orders = store ? store.orders : [];
+  var active = orders.filter(function(o){ return !o.archived; });
+  var archived = orders.filter(function(o){ return o.archived; });
+  var activeTotal = active.reduce(function(sum,o){ return sum + (Number(o.prepaidAmount)||0); }, 0);
+  var grid = document.getElementById('statsGrid');
+  var defs = [
+    {label:'全部訂單', value: orders.length},
+    {label:'未結案', value: active.length},
+    {label:'已結案', value: archived.length},
+    {label:'未結案總金額', value: '$'+fmtMoney(activeTotal)}
+  ];
+  grid.innerHTML = defs.map(function(s){
+    return '<div class="stat-card"><div class="stat-label">'+s.label+'</div><div class="stat-value">'+s.value+'</div></div>';
+  }).join('');
+}
+
+/* ================= Filter ================= */
+function getFilteredOrders(){
+  var store = activeStore();
+  if(!store) return [];
+  var kw = (document.getElementById('filterKeyword').value||'').trim().toLowerCase();
+  var showArchived = document.getElementById('filterShowArchived').checked;
+  return store.orders.filter(function(o){
+    if(!showArchived && o.archived) return false;
+    if(kw){
+      var itemsText = (o.items||[]).map(function(it){return it.product||'';}).join(' ');
+      var hay = [itemsText,(o.orderNo||''),(o.sales||'')].join(' ').toLowerCase();
+      if(hay.indexOf(kw)===-1) return false;
+    }
+    return true;
+  });
+}
+
+/* ================= Render: Table head (dynamic columns) ================= */
+function renderTableHead(showArchived){
+  var row = document.getElementById('tableHeadRow');
+  var html =
+    '<th style="width:96px;">付訂日期</th>'+
+    '<th>訂單編號</th>'+
+    '<th>商品</th>'+
+    '<th style="text-align:right;">預付金額</th>'+
+    '<th>取貨方式</th>'+
+    '<th>會員</th>'+
+    '<th>業務</th>';
+  if(showArchived){
+    html += '<th>結案日期</th><th>處理人</th>';
+  }
+  html += '<th></th>';
+  row.innerHTML = html;
+}
+
+/* ================= Render: Table ================= */
+function itemsSummaryHtml(items){
+  if(!items || !items.length) return '—';
+  return items.map(function(it){
+    var amt = (it.amount!==''&&it.amount!=null&&Number(it.amount)>0) ? ' <span class="price-tag">$'+fmtMoney(it.amount)+'</span>' : '';
+    return '<span class="item-line">'+escapeHtml(it.product||'—')+amt+'</span>';
+  }).join('');
+}
+function memberSummaryHtml(o){
+  var out = '';
+  if(o.beutiiMember) out += '<span class="chip" style="background:var(--blue-accent);">Beutii</span>';
+  if(o.deptMember) out += '<span class="chip" style="background:var(--navy-700);">百貨</span>';
+  return out || '—';
+}
+function renderTable(){
+  var store = activeStore();
+  var showArchived = document.getElementById('filterShowArchived').checked;
+  renderTableHead(showArchived);
+  var colspan = showArchived ? 9 : 7;
+  var tbody = document.getElementById('ordersBody');
+  var orders = getFilteredOrders();
+  document.getElementById('resultCount').textContent = orders.length + ' 筆';
+
+  orders = orders.slice().sort(function(a,b){
+    return (b.date||'').localeCompare(a.date||'') || (b.createdAt||0)-(a.createdAt||0);
+  });
+
+  if(!store){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="'+colspan+'">請先新增門市。</td></tr>';
+    return;
+  }
+  if(!orders.length){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="'+colspan+'">目前沒有符合條件的訂單，點右上方「＋ 新增訂單」開始建立。</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = orders.map(function(o){
+    var orderLabel = escapeHtml(o.orderNo||'—') + (o.archived ? ' <span class="price-tag" style="background:var(--gold-soft);color:var(--blue-accent-d);">已結案</span>' : '');
+    var closedCols = showArchived ? ('<td>'+fmtDate(o.closedDate)+'</td><td>'+escapeHtml(o.closedBy||'—')+'</td>') : '';
+    return '<tr data-id="'+o.id+'"'+(o.archived?' style="opacity:.6;"':'')+'>'+
+      '<td>'+fmtDate(o.date)+'</td>'+
+      '<td>'+orderLabel+'</td>'+
+      '<td class="items-list">'+itemsSummaryHtml(o.items)+'</td>'+
+      '<td class="amount num">$'+fmtMoney(o.prepaidAmount)+'</td>'+
+      '<td><span class="status-tag '+deliveryTagClass(o.deliveryStatus)+'">'+escapeHtml(o.deliveryStatus)+'</span></td>'+
+      '<td>'+memberSummaryHtml(o)+'</td>'+
+      '<td>'+escapeHtml(o.sales||'—')+'</td>'+
+      closedCols+
+      '<td><div class="row-actions">'+
+        '<button class="icon-btn edit" title="修改">✏️</button>'+
+        '<button class="icon-btn archive" title="'+(o.archived?'取消結案':'結案')+'">'+(o.archived?'↩️':'📦')+'</button>'+
+        '<button class="icon-btn del" title="刪除">🗑️</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+
+  Array.prototype.forEach.call(tbody.querySelectorAll('tr'), function(tr){
+    var id = tr.getAttribute('data-id');
+    var o = store.orders.find(function(x){return x.id===id;});
+    if(!o) return;
+    tr.querySelector('.edit').onclick = function(){ openOrderModal(id); };
+    tr.querySelector('.del').onclick = function(){
+      var label = o.orderNo || (o.items[0]&&o.items[0].product) || '（無編號）';
+      showConfirm('刪除訂單', '確定要刪除訂單「'+label+'」嗎？', function(){
+        store.orders = store.orders.filter(function(x){return x.id!==id;});
+        saveState(); renderAll();
+        toast('已刪除訂單');
+      });
+    };
+    tr.querySelector('.archive').onclick = function(){
+      if(o.archived){
+        o.archived = false;
+        saveState(); renderAll();
+        toast('已取消結案');
+      }else{
+        openCloseModal(id);
+      }
+    };
+  });
+}
+
+/* ================= Render: All ================= */
+function renderAll(){
+  renderStoreTabs();
+  renderStats();
+  renderTable();
+}
+
+/* ================= Items list (modal) ================= */
+function renderItemRows(){
+  var wrap = document.getElementById('itemsContainer');
+  wrap.innerHTML = editingItems.map(function(it,i){
+    return '<div class="item-row" data-idx="'+i+'">'+
+      '<input type="text" class="item-product" placeholder="商品名稱" value="'+escapeAttr(it.product)+'">'+
+      '<input type="number" class="item-amount" placeholder="金額" value="'+escapeAttr(it.amount)+'">'+
+      '<button type="button" class="item-remove"'+(editingItems.length<=1?' disabled':'')+'>✕</button>'+
+    '</div>';
+  }).join('');
+  Array.prototype.forEach.call(wrap.querySelectorAll('.item-row'), function(row){
+    var idx = Number(row.getAttribute('data-idx'));
+    row.querySelector('.item-product').addEventListener('input', function(e){ editingItems[idx].product = e.target.value; });
+    row.querySelector('.item-amount').addEventListener('input', function(e){ editingItems[idx].amount = e.target.value; });
+    row.querySelector('.item-remove').onclick = function(){
+      if(editingItems.length<=1) return;
+      editingItems.splice(idx,1);
+      renderItemRows();
+    };
+  });
+}
+document.getElementById('btnAddItem').onclick = function(){
+  editingItems.push({ id: uid(), product:'', amount:'' });
+  renderItemRows();
+};
+
+/* ================= Formula live calc ================= */
+function updatePrepaidPreview(){
+  var total = document.getElementById('oProductTotal').value;
+  var deducted = document.getElementById('oPointsDeducted').value;
+  var lineGiftUsed = document.getElementById('oLineGiftUsed').checked;
+  var prepaid = computePrepaid(total, deducted, lineGiftUsed);
+  var field = document.getElementById('oPrepaidAmount');
+  field.value = '$'+fmtMoney(prepaid);
+  field.style.color = prepaid<0 ? 'var(--red)' : '';
+}
+document.getElementById('oProductTotal').addEventListener('input', updatePrepaidPreview);
+document.getElementById('oPointsDeducted').addEventListener('input', updatePrepaidPreview);
+document.getElementById('oLineGiftUsed').addEventListener('change', function(){
+  document.getElementById('lineGiftCodeWrap').style.display = this.checked ? 'block' : 'none';
+  updatePrepaidPreview();
+});
+
+/* ================= Member field show/hide ================= */
+document.getElementById('oBeutiiMember').addEventListener('change', function(){
+  document.getElementById('beutiiPhoneWrap').style.display = this.checked ? 'block' : 'none';
+});
+document.getElementById('oDeptMember').addEventListener('change', function(){
+  document.getElementById('deptMemberWrap').style.display = this.checked ? 'block' : 'none';
+  updateDeptPhoneVisibility();
+});
+document.getElementById('oDeptSamePhone').addEventListener('change', updateDeptPhoneVisibility);
+function updateDeptPhoneVisibility(){
+  var same = document.getElementById('oDeptSamePhone').checked;
+  document.getElementById('deptPhoneWrap').style.display = same ? 'none' : 'block';
+}
+
+/* ================= Order Modal ================= */
+function openOrderModal(id){
+  editingOrderId = id || null;
+  fillSelect(document.getElementById('oPayment'), state.settings.paymentMethods);
+  if(id){
+    var o = activeStore().orders.find(function(x){return x.id===id;});
+    document.getElementById('orderModalTitle').textContent = '修改訂單';
+    document.getElementById('oDate').value = o.date||'';
+    document.getElementById('oOrderNo').value = o.orderNo||'';
+    document.getElementById('oPayment').value = o.paymentMethod||state.settings.paymentMethods[0];
+    editingItems = (o.items||[]).map(function(it){ return {id:it.id||uid(), product:it.product||'', amount:it.amount!=null?it.amount:''}; });
+    if(!editingItems.length) editingItems = [{id:uid(),product:'',amount:''}];
+    document.getElementById('oProductTotal').value = o.productTotal!=null?o.productTotal:'';
+    document.getElementById('oPointsDeducted').value = o.pointsDeducted!=null?o.pointsDeducted:'';
+    document.getElementById('oLineGiftUsed').checked = !!o.lineGiftUsed;
+    document.getElementById('oLineGiftCode').value = o.lineGiftCode||'';
+    document.getElementById('oDeliveryStatus').value = o.deliveryStatus||'自取-待取';
+    document.getElementById('oSales').value = o.sales||'';
+    document.getElementById('oCarrierNo').value = o.carrierNo||'';
+    document.getElementById('oBeutiiMember').checked = !!o.beutiiMember;
+    document.getElementById('oBeutiiPhone').value = o.beutiiMemberPhone||'';
+    document.getElementById('oDeptMember').checked = !!o.deptMember;
+    document.getElementById('oDeptSamePhone').checked = o.deptMemberSamePhone!==false;
+    document.getElementById('oDeptPhone').value = o.deptMemberPhone||'';
+  }else{
+    document.getElementById('orderModalTitle').textContent = '新增訂單';
+    document.getElementById('oDate').value = todayStr();
+    document.getElementById('oOrderNo').value = '#000000';
+    document.getElementById('oPayment').value = state.settings.paymentMethods[0];
+    editingItems = [{id:uid(),product:'',amount:''}];
+    document.getElementById('oProductTotal').value = '';
+    document.getElementById('oPointsDeducted').value = '';
+    document.getElementById('oLineGiftUsed').checked = false;
+    document.getElementById('oLineGiftCode').value = '';
+    document.getElementById('oDeliveryStatus').value = '自取-待取';
+    document.getElementById('oSales').value = '';
+    document.getElementById('oCarrierNo').value = '';
+    document.getElementById('oBeutiiMember').checked = false;
+    document.getElementById('oBeutiiPhone').value = '';
+    document.getElementById('oDeptMember').checked = false;
+    document.getElementById('oDeptSamePhone').checked = true;
+    document.getElementById('oDeptPhone').value = '';
+  }
+  renderItemRows();
+  document.getElementById('lineGiftCodeWrap').style.display = document.getElementById('oLineGiftUsed').checked ? 'block':'none';
+  updatePrepaidPreview();
+  document.getElementById('beutiiPhoneWrap').style.display = document.getElementById('oBeutiiMember').checked ? 'block':'none';
+  document.getElementById('deptMemberWrap').style.display = document.getElementById('oDeptMember').checked ? 'block':'none';
+  updateDeptPhoneVisibility();
+  openOverlay('overlayOrder');
+}
+document.getElementById('btnAddOrder').onclick = function(){
+  if(!activeStore()){ toast('請先新增門市'); return; }
+  openOrderModal(null);
+};
+document.getElementById('btnSaveOrder').onclick = function(){
+  var store = activeStore();
+  if(!store) return;
+
+  var firstProduct = (editingItems[0] && editingItems[0].product || '').trim();
+  if(!firstProduct){ toast('請至少輸入第一項商品名稱'); return; }
+  if(editingItems.length>=2){
+    var missing = editingItems.some(function(it){
+      return !((it.product||'').trim()) || it.amount===''||it.amount==null||Number(it.amount)<=0;
+    });
+    if(missing){ toast('有兩樣以上商品時，每一項都需要填寫商品名稱與金額'); return; }
+  }
+
+  var productTotal = document.getElementById('oProductTotal').value;
+  var pointsDeducted = document.getElementById('oPointsDeducted').value;
+  var lineGiftUsed = document.getElementById('oLineGiftUsed').checked;
+
+  var data = {
+    date: document.getElementById('oDate').value || todayStr(),
+    orderNo: document.getElementById('oOrderNo').value.trim() || '#000000',
+    items: editingItems.map(function(it){ return {id:it.id||uid(), product:(it.product||'').trim(), amount: it.amount===''?'':Number(it.amount)||0}; }),
+    productTotal: productTotal===''?'':Number(productTotal)||0,
+    pointsDeducted: pointsDeducted===''?'':Number(pointsDeducted)||0,
+    lineGiftUsed: lineGiftUsed,
+    lineGiftCode: document.getElementById('oLineGiftCode').value.trim(),
+    prepaidAmount: computePrepaid(productTotal, pointsDeducted, lineGiftUsed),
+    deliveryStatus: document.getElementById('oDeliveryStatus').value,
+    paymentMethod: document.getElementById('oPayment').value,
+    sales: document.getElementById('oSales').value.trim(),
+    carrierNo: document.getElementById('oCarrierNo').value.trim(),
+    beutiiMember: document.getElementById('oBeutiiMember').checked,
+    beutiiMemberPhone: document.getElementById('oBeutiiPhone').value.trim(),
+    deptMember: document.getElementById('oDeptMember').checked,
+    deptMemberSamePhone: document.getElementById('oDeptSamePhone').checked,
+    deptMemberPhone: document.getElementById('oDeptPhone').value.trim()
+  };
+
+  if(editingOrderId){
+    var o = store.orders.find(function(x){return x.id===editingOrderId;});
+    Object.assign(o, data);
+    toast('已更新訂單');
+  }else{
+    data.id = uid();
+    data.archived = false;
+    data.closedDate = '';
+    data.closedBy = '';
+    data.createdAt = Date.now();
+    store.orders.unshift(data);
+    toast('已新增訂單');
+  }
+  saveState();
+  closeOverlay('overlayOrder');
+  renderAll();
+};
+
+/* ================= Close Order Modal (結案) ================= */
+function openCloseModal(id){
+  closingOrderId = id;
+  document.getElementById('cDate').value = todayStr();
+  document.getElementById('cBy').value = '';
+  openOverlay('overlayClose');
+}
+document.getElementById('btnConfirmClose').onclick = function(){
+  var store = activeStore();
+  if(!store) return;
+  var o = store.orders.find(function(x){return x.id===closingOrderId;});
+  if(!o) return;
+  var by = document.getElementById('cBy').value.trim();
+  if(!by){ toast('請輸入處理人'); return; }
+  o.archived = true;
+  o.closedDate = document.getElementById('cDate').value || todayStr();
+  o.closedBy = by;
+  saveState();
+  closeOverlay('overlayClose');
+  renderAll();
+  toast('已結案，可勾選「顯示已結案」查看');
+};
+
+/* ================= Store Modal ================= */
+document.getElementById('btnAddStore').onclick = function(){
+  document.getElementById('storeNameInput').value = '';
+  openOverlay('overlayStore');
+};
+document.getElementById('btnSaveStore').onclick = function(){
+  var name = document.getElementById('storeNameInput').value.trim();
+  if(!name){ toast('請輸入門市名稱'); return; }
+  var st = newStore(name);
+  state.stores.push(st);
+  state.activeStoreId = st.id;
+  saveState();
+  closeOverlay('overlayStore');
+  renderAll();
+  toast('已新增門市「'+name+'」');
+};
+
+/* ================= Settings Modal (付款方式) ================= */
+function renderPaymentMethodList(){
+  var pmList = document.getElementById('pmList');
+  pmList.innerHTML = state.settings.paymentMethods.map(function(p,i){
+    return '<div class="opt-item" data-idx="'+i+'">'+
+      '<input type="text" value="'+escapeAttr(p)+'">'+
+      '<button class="icon-btn del" title="刪除">🗑️</button>'+
+    '</div>';
+  }).join('');
+  Array.prototype.forEach.call(pmList.querySelectorAll('.opt-item'), function(item){
+    var idx = Number(item.getAttribute('data-idx'));
+    item.querySelector('input').addEventListener('change', function(e){
+      state.settings.paymentMethods[idx] = e.target.value.trim() || state.settings.paymentMethods[idx];
+      saveState();
+    });
+    item.querySelector('.del').onclick = function(){
+      if(state.settings.paymentMethods.length<=1){ toast('至少要保留一種付款方式'); return; }
+      state.settings.paymentMethods.splice(idx,1);
+      saveState();
+      renderPaymentMethodList();
+    };
+  });
+}
+document.getElementById('btnSettings').onclick = function(){
+  renderPaymentMethodList();
+  openOverlay('overlaySettings');
+};
+document.getElementById('btnAddPaymentMethod').onclick = function(){
+  state.settings.paymentMethods.push('新付款方式');
+  saveState();
+  renderPaymentMethodList();
+};
+
+/* ================= Filter bindings ================= */
+document.getElementById('filterKeyword').addEventListener('input', renderTable);
+document.getElementById('filterShowArchived').addEventListener('change', renderTable);
+
+/* ================= Init ================= */
+state = loadState();
+saveState();
+renderAll();
+
+/* 同一台裝置開了兩個分頁/視窗時，其中一邊儲存後，另一邊自動同步畫面 */
+window.addEventListener('storage', function(e){
+  if(e.key===STORAGE_KEY){
+    state = loadState();
+    renderAll();
+  }
+});
+
+})();
+</script>
+</body>
+</html>
