@@ -415,6 +415,11 @@ td.center{text-align:center;}
           <option value="自取">含待自取商品</option>
           <option value="已取">含已取商品</option>
         </select>
+        <select id="filterDepVoucher">
+          <option value="">全部兌換券</option>
+          <option value="yes">有兌換券</option>
+          <option value="no">無兌換券</option>
+        </select>
         <input type="text" id="filterDepKeyword" placeholder="搜尋訂單編號／商品／客人…">
         <div class="filter-spacer"></div>
         <span class="result-count" id="resultCountDeposit"></span>
@@ -1011,11 +1016,14 @@ function getFilteredDeposits(){
   var salesF = document.getElementById('filterDepSales').value;
   var payF = document.getElementById('filterDepPayment').value;
   var pickupF = document.getElementById('filterDepPickup').value;
+  var voucherF = document.getElementById('filterDepVoucher').value;
   var kw = document.getElementById('filterDepKeyword').value.trim().toLowerCase();
   return camp.deposits.filter(function(d){
     if(salesF && d.sales!==salesF) return false;
     if(payF && d.paymentMethod!==payF) return false;
     if(pickupF && !d.items.some(function(it){return it.status===pickupF;})) return false;
+    if(voucherF==='yes' && !d.voucher) return false;
+    if(voucherF==='no' && d.voucher) return false;
     if(kw){
       var itemsText = d.items.map(function(i){return i.product;}).join(' ');
       var hay = (d.orderNo+' '+itemsText+' '+d.customerName+' '+d.phone).toLowerCase();
@@ -1057,17 +1065,11 @@ function renderStats(){
         productTotal += (Number(it.price)||0) * (Number(it.qty)||0);
       });
     });
-    var repCards = activeStore().salesReps.map(function(rep){
-      var repAmt = deps.filter(function(d){return d.sales===rep.name;}).reduce(function(s,d){return s+d.amount;},0);
-      var repCount = deps.filter(function(d){return d.sales===rep.name;}).length;
-      return statCard(rep.name+' 收訂', '$'+fmtMoney(repAmt), repCount+' 筆訂單', rep.color);
-    }).join('');
     grid.innerHTML =
       statCard('商品總額','$'+fmtMoney(productTotal),'依商品金額×數量加總') +
       statCard('總訂金金額','$'+fmtMoney(dTotal),dCount+' 筆訂單') +
       statCard('訂單數', dCount+' <small>筆</small>', '目前篩選：'+getFilteredDeposits().length+' 筆') +
-      statCard('待自取商品', pendingQty+' <small>件</small>', pendingItems+' 項待留貨') +
-      repCards;
+      statCard('待自取商品', pendingQty+' <small>件</small>', pendingItems+' 項待留貨');
   }
 }
 function statCard(label,value,sub,accentColor){
@@ -1151,7 +1153,9 @@ function renderBreakdown(){
       });
   } else {
     var deps = camp.deposits;
-    var bySales2 = groupBy(deps, function(d){return d.sales;}, function(d){return d.amount;});
+    var bySales2 = groupBy(deps, function(d){return d.sales;}, function(d){
+      return d.items.reduce(function(s,it){ return s + (Number(it.price)||0)*(Number(it.qty)||0); }, 0);
+    });
     var byPayment = groupBy(deps, function(d){return d.paymentMethod;}, function(d){return d.amount;});
     var byStatus = {'宅配':{qty:0}, '自取':{qty:0}, '已取':{qty:0}};
     var byPendingProduct = {};
@@ -1166,7 +1170,7 @@ function renderBreakdown(){
       });
     });
     grid.innerHTML =
-      renderPanel('依業務', bySales2, function(k){ return salesRepColor(k); }) +
+      renderPanel('依業務', bySales2, function(k){ return salesRepColor(k); }, true) +
       renderPanel('依付款方式', byPayment) +
       renderQtyPanel('配送狀態（依件數）', byStatus, function(k){
         return k==='已取' ? 'var(--green)' : (k==='自取' ? 'var(--amber)' : 'var(--blue-accent)');
@@ -1842,6 +1846,7 @@ document.getElementById('filterKeyword').oninput = debounce(renderAll, 200);
 document.getElementById('filterDepSales').onchange = renderAll;
 document.getElementById('filterDepPayment').onchange = renderAll;
 document.getElementById('filterDepPickup').onchange = renderAll;
+document.getElementById('filterDepVoucher').onchange = renderAll;
 document.getElementById('filterDepKeyword').oninput = debounce(renderAll, 200);
 
 Array.prototype.forEach.call(document.querySelectorAll('[data-close]'), function(el){
