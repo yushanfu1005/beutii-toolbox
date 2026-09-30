@@ -4,6 +4,39 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>點數預扣登記表 - Beutii 門市工具箱</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyCiwRvx34o5UnbWux96wAsfGvLOhQa9LZg",
+    authDomain: "storesync-system.firebaseapp.com",
+    projectId: "storesync-system",
+    storageBucket: "storesync-system.firebasestorage.app",
+    messagingSenderId: "404006521402",
+    appId: "1:404006521402:web:34938fbcbfa179805d0303",
+    measurementId: "G-KC5WB4B3JP"
+  };
+
+  var app = initializeApp(firebaseConfig);
+  var db = getFirestore(app);
+  var stateDocRef = doc(db, "beutii_points_system", "state");
+
+  window.FB = {
+    subscribe: function(onData, onError){
+      return onSnapshot(stateDocRef, function(snap){
+        onData(snap.exists() ? snap.data() : null);
+      }, function(err){
+        console.error("Firestore 連線錯誤", err);
+        if(onError) onError(err);
+      });
+    },
+    save: function(data){
+      return setDoc(stateDocRef, JSON.parse(JSON.stringify(data)));
+    }
+  };
+  window.dispatchEvent(new CustomEvent("fb-sdk-ready"));
+</script>
 <style>
 :root{
   /* Beutii 門市工具箱主配色（金褐＋深藏青＋米白） */
@@ -59,6 +92,12 @@ body{
   padding:5px 10px 5px 13px;border-radius:999px;cursor:default;font-family:inherit;
 }
 .store-tab.active{background:var(--blue-accent);border-color:var(--blue-accent);color:#fff;}
+.conn-status{
+  margin-left:auto;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;
+  background:var(--line-soft);color:var(--ink-soft);white-space:nowrap;
+}
+.conn-status.on{background:var(--green-bg);color:var(--green);}
+.conn-status.off{background:var(--red-bg);color:var(--red);}
 .store-tab-add{
   border:1px dashed var(--line);background:transparent;color:var(--ink-soft);font-weight:600;font-size:12px;
   padding:5px 12px;border-radius:999px;cursor:pointer;font-family:inherit;
@@ -256,6 +295,7 @@ td.center{text-align:center;}
     <span class="storebar-label">門市</span>
     <div class="store-tabs" id="storeTabs"></div>
     <button class="store-tab-add" id="btnAddStore">＋ 新增門市</button>
+    <span class="conn-status" id="connStatus">連線中…</span>
   </div>
 </div>
 
@@ -503,7 +543,7 @@ function migrateState(raw){
   if(!raw.settings.paymentMethods || !raw.settings.paymentMethods.length) raw.settings.paymentMethods = defaultSettings().paymentMethods;
   return raw;
 }
-function loadState(){
+function loadStateLocalFallback(){
   try{
     var raw = localStorage.getItem(STORAGE_KEY);
     if(!raw) return defaultState();
@@ -512,7 +552,13 @@ function loadState(){
 }
 function saveState(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  catch(e){ toast('儲存失敗，可能是瀏覽器儲存空間已滿或使用無痕模式'); }
+  catch(e){ toast('本機儲存失敗，可能是瀏覽器儲存空間已滿或使用無痕模式'); }
+  if(window.FB){
+    window.FB.save(state).catch(function(err){
+      console.error('雲端同步失敗', err);
+      toast('⚠️ 雲端同步失敗，請檢查網路連線（資料已暫存在本機）');
+    });
+  }
 }
 
 /* ================= Helpers ================= */
@@ -994,18 +1040,33 @@ document.getElementById('btnAddPaymentMethod').onclick = function(){
 document.getElementById('filterKeyword').addEventListener('input', renderTable);
 document.getElementById('filterShowArchived').addEventListener('change', renderTable);
 
-/* ================= Init ================= */
-state = loadState();
-saveState();
-renderAll();
-
-/* 同一台裝置開了兩個分頁/視窗時，其中一邊儲存後，另一邊自動同步畫面 */
-window.addEventListener('storage', function(e){
-  if(e.key===STORAGE_KEY){
-    state = loadState();
+/* ================= Init (Firebase-backed，跨裝置即時同步) ================= */
+function setConnStatus(connected){
+  var el = document.getElementById('connStatus');
+  if(!el) return;
+  el.textContent = connected ? '🟢 已連線' : '🔴 連線中斷（使用本機資料）';
+  el.className = 'conn-status ' + (connected ? 'on' : 'off');
+}
+function startApp(){
+  window.FB.subscribe(function(remoteData){
+    if(remoteData){
+      state = migrateState(JSON.parse(JSON.stringify(remoteData)));
+    }else{
+      // Firestore 上還沒有資料：第一次啟用，接續本機舊資料（沒有的話用預設門市）並上傳
+      state = loadStateLocalFallback();
+      window.FB.save(state);
+    }
     renderAll();
-  }
-});
+    setConnStatus(true);
+  }, function(){
+    setConnStatus(false);
+    if(!state){
+      state = loadStateLocalFallback();
+      renderAll();
+    }
+  });
+}
+if(window.FB){ startApp(); } else { window.addEventListener('fb-sdk-ready', startApp); }
 
 })();
 </script>
