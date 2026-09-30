@@ -338,10 +338,44 @@ td.center{text-align:center;}
 .toast{background:var(--navy-900);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,0.25);opacity:0;transform:translateY(8px);transition:all .2s ease;}
 .toast.show{opacity:1;transform:translateY(0);}
 
+/* referral card */
+.referral-card{
+  border:2px solid var(--navy-800);border-radius:12px;padding:18px 20px;background:#fff;
+}
+.rc-brand{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--navy-800);}
+.rc-campaign{font-size:11.5px;color:var(--ink-soft);margin-top:2px;margin-bottom:10px;}
+.rc-row{margin-bottom:12px;}
+.rc-label{font-size:11px;color:var(--ink-soft);font-weight:700;margin-bottom:2px;}
+.rc-product{font-size:17px;font-weight:700;color:var(--ink);}
+.rc-price{font-size:26px;font-weight:800;color:var(--navy-800);}
+.rc-promo-tag{
+  display:inline-block;margin-top:5px;font-size:11.5px;font-weight:700;color:var(--navy-800);
+  background:var(--amber-bg);padding:3px 10px;border-radius:999px;
+}
+.rc-promo-empty{font-size:10.5px;color:var(--ink-soft);margin-top:4px;}
+.rc-divider{border-top:1px dashed var(--line);margin:12px 0;}
+.rc-meta-row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink);margin-bottom:6px;}
+.rc-meta-row .rc-label{margin-bottom:0;}
+.rc-footer{font-size:10.5px;color:var(--ink-soft);margin-top:10px;text-align:center;line-height:1.6;}
+
 @media(max-width:640px){
   .field-row,.field-row.three{grid-template-columns:1fr;}
   .type-grid{grid-template-columns:repeat(2,1fr);}
   .brand-title{font-size:16px;}
+}
+
+@media print{
+  @page{margin:10mm;}
+  body > *:not(#overlayReferralCard){display:none !important;}
+  #overlayReferralCard{
+    position:static !important;display:flex !important;
+    align-items:flex-start;justify-content:flex-start;
+    background:#fff;padding:0;inset:auto;
+  }
+  #overlayReferralCard .modal{box-shadow:none;max-width:340px;width:auto;margin:0;}
+  #overlayReferralCard .modal-head, #overlayReferralCard .modal-foot, #overlayReferralCard .hint{display:none;}
+  #overlayReferralCard .modal-body{padding:0;max-height:none;overflow:visible;}
+  .referral-card{border-width:2px;padding:14px 16px;}
 }
 </style>
 </head>
@@ -518,6 +552,15 @@ td.center{text-align:center;}
         <label class="checkline"><input type="checkbox" id="rPurchased"> 已成功購買（成交）</label>
       </div>
       <div class="field">
+        <label>轉介優惠方案（選填，跨店轉介小卡用）</label>
+        <select id="rPromoTier">
+          <option value="">未選擇</option>
+          <option value="會員活動">會員活動</option>
+          <option value="會員+ICP">會員+ICP</option>
+          <option value="會員+ICP+聯名卡">會員+ICP+聯名卡</option>
+        </select>
+      </div>
+      <div class="field">
         <label>備註（選填，內部使用）</label>
         <textarea id="rNotes" placeholder="例如：客人希望等第二波優惠再下單"></textarea>
       </div>
@@ -525,6 +568,37 @@ td.center{text-align:center;}
     <div class="modal-foot">
       <button class="btn btn-light btn-sm" data-close="overlayRecord">取消</button>
       <button class="btn btn-primary btn-sm" id="btnSaveRecord">儲存紀錄</button>
+    </div>
+  </div>
+</div>
+
+<!-- Referral Card Modal (跨店轉介小卡) -->
+<div class="overlay" id="overlayReferralCard">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head"><h2>跨店轉介小卡</h2><button class="modal-close" data-close="overlayReferralCard">✕</button></div>
+    <div class="modal-body">
+      <div id="referralCardPrintArea" class="referral-card">
+        <div class="rc-brand">Beutii 門市轉介小卡</div>
+        <div class="rc-campaign" id="rcCampaign"></div>
+        <div class="rc-row">
+          <div class="rc-label">商品名稱</div>
+          <div class="rc-product" id="rcProduct"></div>
+        </div>
+        <div class="rc-row">
+          <div class="rc-label">活動折後價</div>
+          <div class="rc-price" id="rcPrice"></div>
+          <div id="rcPromoWrap"></div>
+        </div>
+        <div class="rc-divider"></div>
+        <div class="rc-meta-row"><span class="rc-label">客人姓名／電話</span><span id="rcCustomer"></span></div>
+        <div class="rc-meta-row"><span class="rc-label">詢問日期</span><span id="rcDate"></span></div>
+        <div class="rc-footer">請持本卡至門市辦理結帳，價格依實際結帳為準<br>貼心提醒：請事先完成會員資格及 icash Pay／聯名卡綁定，加速現場結帳</div>
+      </div>
+      <div class="hint" style="margin-top:10px;">列印時只會印出上面這張小卡，其餘畫面不會列印出來。</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-light btn-sm" data-close="overlayReferralCard">關閉</button>
+      <button class="btn btn-primary btn-sm" id="btnPrintReferralCard">🖨️ 列印小卡</button>
     </div>
   </div>
 </div>
@@ -719,7 +793,7 @@ function seedData(){
       return {
         id: uid(), date:r[0], product:r[1], amount:r[2], customerType:r[3],
         sales:r[4], winRate:r[5]===''?null:Number(r[5]), customerInfo:r[6], email:r[7],
-        notified:false, purchased:false, notes:''
+        notified:false, purchased:false, notes:'', promoTier:''
       };
     }),
     deposits: deposits.map(function(d){
@@ -756,6 +830,7 @@ function migrateCampaignsArray(campaigns){
       if(typeof r.notified !== 'boolean') r.notified = false;
       if(typeof r.purchased !== 'boolean') r.purchased = false;
       if(typeof r.notes !== 'string') r.notes = '';
+      if(typeof r.promoTier !== 'string') r.promoTier = '';
     });
     c.deposits.forEach(function(d){
       d.amount = Number(d.amount) || 0;
@@ -1263,6 +1338,7 @@ function renderInquiryTable(){
       '<td>'+escapeHtml(r.customerInfo||'—')+'</td>'+
       '<td>'+escapeHtml(r.email||'—')+'</td>'+
       '<td><div class="row-actions">'+
+        '<button class="icon-btn card" title="產生轉介小卡">🖨️</button>'+
         '<button class="icon-btn edit" title="編輯">✏️</button>'+
         '<button class="icon-btn del" title="刪除">🗑️</button>'+
       '</div></td>'+
@@ -1275,6 +1351,7 @@ function renderInquiryTable(){
     var rec = camp.inquiries.find(function(r){return r.id===id;});
     tr.querySelector('.edit').onclick = function(){ openRecordModal(id); };
     tr.querySelector('.note-dot').onclick = function(){ openRecordModal(id); };
+    tr.querySelector('.card').onclick = function(){ openReferralCard(id); };
     tr.querySelector('.del').onclick = function(){
       showConfirm('刪除紀錄', '確定要刪除「'+(rec?rec.product:'')+'」這筆詢問紀錄嗎？', function(){
         camp.inquiries = camp.inquiries.filter(function(r){return r.id!==id;});
@@ -1519,6 +1596,7 @@ function openRecordModal(id){
     document.getElementById('rNotified').checked = !!rec.notified;
     document.getElementById('rPurchased').checked = !!rec.purchased;
     document.getElementById('rNotes').value = rec.notes||'';
+    document.getElementById('rPromoTier').value = rec.promoTier||'';
   } else {
     document.getElementById('recordModalTitle').textContent = '新增詢問紀錄';
     document.getElementById('rDate').value = new Date().toISOString().slice(0,10);
@@ -1530,6 +1608,7 @@ function openRecordModal(id){
     document.getElementById('rNotified').checked = false;
     document.getElementById('rPurchased').checked = false;
     document.getElementById('rNotes').value = '';
+    document.getElementById('rPromoTier').value = '';
   }
   openOverlay('overlayRecord');
 }
@@ -1551,7 +1630,8 @@ document.getElementById('btnSaveRecord').onclick = function(){
     email: document.getElementById('rEmail').value.trim(),
     notified: notified,
     purchased: purchased,
-    notes: document.getElementById('rNotes').value.trim()
+    notes: document.getElementById('rNotes').value.trim(),
+    promoTier: document.getElementById('rPromoTier').value
   };
   if(editingRecordId){
     var rec = camp.inquiries.find(function(r){return r.id===editingRecordId;});
@@ -1566,6 +1646,26 @@ document.getElementById('btnSaveRecord').onclick = function(){
   closeOverlay('overlayRecord');
   renderAll();
 };
+
+/* ================= Referral Card (跨店轉介小卡) ================= */
+function openReferralCard(id){
+  var camp = activeCampaign();
+  if(!camp) return;
+  var rec = camp.inquiries.find(function(r){return r.id===id;});
+  if(!rec) return;
+  var periodText = (camp.start||camp.end) ? '（'+fmtDate(camp.start)+' ～ '+fmtDate(camp.end)+'）' : '';
+  document.getElementById('rcCampaign').textContent = camp.name + periodText;
+  document.getElementById('rcProduct').textContent = rec.product;
+  document.getElementById('rcPrice').textContent = '$'+fmtMoney(rec.amount);
+  var promoWrap = document.getElementById('rcPromoWrap');
+  promoWrap.innerHTML = rec.promoTier
+    ? '<span class="rc-promo-tag">適用：'+escapeHtml(rec.promoTier)+'</span>'
+    : '<span class="rc-promo-empty">尚未選擇優惠方案</span>';
+  document.getElementById('rcCustomer').textContent = rec.customerInfo || '—';
+  document.getElementById('rcDate').textContent = fmtDate(rec.date);
+  openOverlay('overlayReferralCard');
+}
+document.getElementById('btnPrintReferralCard').onclick = function(){ window.print(); };
 
 /* ================= Deposit Modal ================= */
 function addDepositItemRow(product, qty, status, price){
