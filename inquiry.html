@@ -263,6 +263,7 @@ td.center{text-align:center;}
   flex:0 0 auto;font-size:10px;font-weight:700;color:var(--ink-soft);
   background:var(--line-soft);padding:1px 6px;border-radius:999px;
 }
+.seq-num{color:var(--ink-soft);font-variant-numeric:tabular-nums;}
 .row-actions{display:flex;gap:6px;}
 .icon-btn{
   border:none;background:transparent;cursor:pointer;color:#8a9aa8;font-size:14px;padding:4px 6px;border-radius:6px;
@@ -626,6 +627,7 @@ var INQUIRY_COLS = [
 ];
 
 var DEPOSIT_COLS = [
+  {key:'seq', label:'#', sortable:false, width:'40px', align:'center'},
   {key:'date', label:'付訂日期', sortable:true, width:'100px'},
   {key:'orderNo', label:'訂單編號', sortable:true},
   {key:'items', label:'商品', sortable:false},
@@ -1314,7 +1316,7 @@ function renderDepositTable(){
     return;
   }
 
-  tbody.innerHTML = deps.map(function(d){
+  tbody.innerHTML = deps.map(function(d, idx){
     var color = salesRepColor(d.sales);
     var itemsHtml = d.items.length
       ? d.items.map(function(i){
@@ -1324,6 +1326,7 @@ function renderDepositTable(){
         }).join('')
       : '—';
     return '<tr data-id="'+d.id+'">'+
+      '<td class="center seq-num">'+(idx+1)+'</td>'+
       '<td>'+fmtDate(d.date)+'</td>'+
       '<td>'+escapeHtml(d.orderNo||'—')+'</td>'+
       '<td class="items-list" style="white-space:normal;max-width:320px;">'+itemsHtml+'</td>'+
