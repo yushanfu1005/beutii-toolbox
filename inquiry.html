@@ -227,6 +227,8 @@ thead th.no-sort{cursor:default;}
 thead th .arrow{margin-left:3px;opacity:.6;font-size:10px;}
 tbody td{padding:9px 12px;font-size:13px;border-bottom:1px solid var(--line-soft);white-space:nowrap;}
 tbody tr:hover{background:#f7fafc;}
+tbody tr.row-closed{opacity:.55;}
+tbody tr.row-closed:hover{opacity:1;}
 tbody tr:last-child td{border-bottom:none;}
 td.amount{text-align:right;font-weight:600;color:var(--navy-900);}
 td.center{text-align:center;}
@@ -456,6 +458,7 @@ td.center{text-align:center;}
           <option value="no">無兌換券</option>
         </select>
         <input type="text" id="filterDepKeyword" placeholder="搜尋訂單編號／商品／客人…">
+        <label class="checkline" style="padding:0;"><input type="checkbox" id="filterDepShowClosed"> 顯示已結案</label>
         <div class="filter-spacer"></div>
         <span class="result-count" id="resultCountDeposit"></span>
         <button class="btn btn-primary btn-sm" id="btnAddDeposit">＋ 新增訂金訂單</button>
@@ -709,6 +712,7 @@ var DEPOSIT_COLS = [
   {key:'paymentMethod', label:'付款方式', sortable:true},
   {key:'voucher', label:'兌換券', sortable:true},
   {key:'member', label:'Beutii會員', sortable:true},
+  {key:'closed', label:'結案', sortable:true},
   {key:'sales', label:'業務', sortable:true},
   {key:'customerName', label:'客人姓名', sortable:false},
   {key:'phone', label:'電話', sortable:false},
@@ -799,7 +803,7 @@ function seedData(){
     deposits: deposits.map(function(d){
       return {
         id: uid(), orderNo:d.orderNo, date:d.date, paymentMethod:d.paymentMethod,
-        voucher:d.voucher, member:d.member, sales:d.sales,
+        voucher:d.voucher, member:d.member, closed:false, sales:d.sales,
         customerName:d.customerName, phone:d.phone, amount:d.amount,
         items: d.items.map(function(it){ return {id:uid(), product:it.product, qty:it.qty, status:it.status, price:it.price}; })
       };
@@ -836,6 +840,7 @@ function migrateCampaignsArray(campaigns){
       d.amount = Number(d.amount) || 0;
       if(typeof d.voucher !== 'boolean') d.voucher = false;
       if(typeof d.member !== 'boolean') d.member = false;
+      if(typeof d.closed !== 'boolean') d.closed = false;
       if(!Array.isArray(d.items)) d.items = [];
       // old "先取貨" boolean → per-item status (已取 if it was marked picked up, else 自取)
       var fallbackStatus = d.pickupFirst ? '已取' : '自取';
@@ -1094,8 +1099,10 @@ function getFilteredDeposits(){
   var payF = document.getElementById('filterDepPayment').value;
   var pickupF = document.getElementById('filterDepPickup').value;
   var voucherF = document.getElementById('filterDepVoucher').value;
+  var showClosed = document.getElementById('filterDepShowClosed').checked;
   var kw = document.getElementById('filterDepKeyword').value.trim().toLowerCase();
   return camp.deposits.filter(function(d){
+    if(!showClosed && d.closed) return false;
     if(salesF && d.sales!==salesF) return false;
     if(payF && d.paymentMethod!==payF) return false;
     if(pickupF && !d.items.some(function(it){return it.status===pickupF;})) return false;
@@ -1135,6 +1142,7 @@ function renderStats(){
     var deps = camp.deposits;
     var dTotal = deps.reduce(function(s,d){return s+d.amount;},0);
     var dCount = deps.length;
+    var closedCount = deps.filter(function(d){return d.closed;}).length;
     var pendingItems = 0, pendingQty = 0, productTotal = 0;
     deps.forEach(function(d){
       d.items.forEach(function(it){
@@ -1145,7 +1153,8 @@ function renderStats(){
     grid.innerHTML =
       statCard('商品總額','$'+fmtMoney(productTotal),'依商品金額×數量加總') +
       statCard('總訂金金額','$'+fmtMoney(dTotal),dCount+' 筆訂單') +
-      statCard('訂單數', dCount+' <small>筆</small>', '目前篩選：'+getFilteredDeposits().length+' 筆') +
+      statCard('訂單數', dCount+' <small>筆</small>', (dCount-closedCount)+' 筆未結案') +
+      statCard('已結案', closedCount+' <small>筆</small>', '已完成付款') +
       statCard('待自取商品', pendingQty+' <small>件</small>', pendingItems+' 項待留貨');
   }
 }
@@ -1383,7 +1392,7 @@ function renderDepositTable(){
     var k = sortDeposit.key, dir = sortDeposit.dir==='asc'?1:-1;
     var av = a[k], bv = b[k];
     if(k==='amount'){ return ((av||0)-(bv||0))*dir; }
-    if(k==='voucher' || k==='member'){ return ((a[k]?1:0)-(b[k]?1:0))*dir; }
+    if(k==='voucher' || k==='member' || k==='closed'){ return ((a[k]?1:0)-(b[k]?1:0))*dir; }
     av = (av||'').toString(); bv=(bv||'').toString();
     return av.localeCompare(bv,'zh-Hant')*dir;
   });
@@ -1402,7 +1411,7 @@ function renderDepositTable(){
             '<button class="status-tag tag-'+statusClass(i.status)+'" data-item-id="'+i.id+'">'+i.status+'</button></span>';
         }).join('')
       : '—';
-    return '<tr data-id="'+d.id+'">'+
+    return '<tr data-id="'+d.id+'"'+(d.closed?' class="row-closed"':'')+'>'+
       '<td class="center seq-num">'+(idx+1)+'</td>'+
       '<td>'+fmtDate(d.date)+'</td>'+
       '<td>'+escapeHtml(d.orderNo||'—')+'</td>'+
@@ -1411,6 +1420,7 @@ function renderDepositTable(){
       '<td>'+escapeHtml(d.paymentMethod||'—')+'</td>'+
       '<td class="center"><button class="bool-chip toggle-voucher '+(d.voucher?'on':'off')+'">'+(d.voucher?'O':'X')+'</button></td>'+
       '<td class="center"><button class="bool-chip toggle-member '+(d.member?'on':'off')+'">'+(d.member?'O':'X')+'</button></td>'+
+      '<td class="center"><button class="bool-chip toggle-closed '+(d.closed?'on':'off')+'">'+(d.closed?'O':'X')+'</button></td>'+
       '<td><span class="chip" style="background:'+color+';color:'+chipTextColor(color)+'">'+escapeHtml(d.sales||'—')+'</span></td>'+
       '<td>'+escapeHtml(d.customerName||'—')+'</td>'+
       '<td>'+escapeHtml(d.phone||'—')+'</td>'+
@@ -1435,6 +1445,15 @@ function renderDepositTable(){
     };
     tr.querySelector('.toggle-member').onclick = function(){
       dep.member = !dep.member; saveState(); renderAll();
+    };
+    tr.querySelector('.toggle-closed').onclick = function(){
+      var newVal = !dep.closed;
+      showConfirm(
+        newVal ? '結案確認' : '取消結案',
+        '訂單「'+(dep.orderNo||'（無編號）')+'」／'+(dep.customerName||'客人')+'，確定要'+(newVal?'標記為已結案（已完成付款）':'改回未結案')+'嗎？',
+        function(){ dep.closed = newVal; saveState(); renderAll(); },
+        {okLabel: newVal?'確認結案':'確認改回', okClass:'btn-primary'}
+      );
     };
     tr.querySelector('.toggle-voucher').onclick = function(){
       var newVal = !dep.voucher;
@@ -1894,10 +1913,10 @@ function exportInquiryCsv(){
 function exportDepositCsv(){
   var camp = activeCampaign();
   if(!camp){ toast('沒有可匯出的檔期'); return; }
-  var headers = ['付訂日期','訂單編號','商品','付訂金額','付款方式','兌換券','Beutii會員','業務','客人姓名','電話'];
+  var headers = ['付訂日期','訂單編號','商品','付訂金額','付款方式','兌換券','Beutii會員','結案','業務','客人姓名','電話'];
   var rows = getFilteredDeposits().map(function(d){
     var itemsText = d.items.map(function(i){return i.product+'×'+i.qty+' $'+i.price+'['+i.status+']';}).join('；');
-    return [d.date, d.orderNo, itemsText, d.amount, d.paymentMethod, d.voucher?'O':'X', d.member?'O':'X', d.sales, d.customerName, d.phone];
+    return [d.date, d.orderNo, itemsText, d.amount, d.paymentMethod, d.voucher?'O':'X', d.member?'O':'X', d.closed?'O':'X', d.sales, d.customerName, d.phone];
   });
   downloadCsv(camp.name + '_訂金明細.csv', headers, rows);
 }
@@ -1950,6 +1969,7 @@ document.getElementById('filterDepSales').onchange = renderAll;
 document.getElementById('filterDepPayment').onchange = renderAll;
 document.getElementById('filterDepPickup').onchange = renderAll;
 document.getElementById('filterDepVoucher').onchange = renderAll;
+document.getElementById('filterDepShowClosed').onchange = renderAll;
 document.getElementById('filterDepKeyword').oninput = debounce(renderAll, 200);
 
 Array.prototype.forEach.call(document.querySelectorAll('[data-close]'), function(el){
