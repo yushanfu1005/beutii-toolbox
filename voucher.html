@@ -112,6 +112,22 @@
   .store-bar{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap;}
   .store-bar-label{font-size:11px;color:#c9beae;font-weight:700;margin-right:2px;}
   .store-bar select{width:auto;min-width:140px;flex:0 0 auto;}
+  /* 手機版：避免寬表格把整個頁面撐寬（表格改在卡片內左右滑動，第一欄固定） */
+  .grid>*{min-width:0}
+  .card{min-width:0}
+  @media(max-width:680px){
+    header{padding:14px}
+    .wrap{padding:12px}
+    .card{padding:12px}
+    input,select{font-size:16px}
+    .mini input,.mini select{font-size:15px}
+    .campaign-bar select{min-width:0}
+    #resultTable th:first-child,#resultTable td:first-child,
+    #productTable th:first-child,#productTable td:first-child{min-width:104px}
+    #resultTable th:first-child,#resultTable td:first-child{position:sticky;left:0;z-index:1;background:var(--card);box-shadow:1px 0 0 var(--line)}
+    #resultTable th:first-child{background:#eef1f4}
+    .toolbar .btn,.toolbar .btn-ghost{flex:1 1 auto}
+  }
 </style>
 </head>
 <body>
@@ -210,8 +226,13 @@ const DEFAULT_CAMPAIGNS = [
     {name:"ICP 6,000/400",           base:6000, reward:400, type:"voucher", cap:null, enabled:true},
     {name:"ICP綁聯名卡 6,000/200",    base:6000, reward:200, type:"voucher", cap:null, enabled:true},
   ]},
+  {id:"c11", name:"愛Sharing一波（11/19-12/02）", thresholds:[
+    {name:"全館 5,000/300",          base:5000,  reward:300,  type:"voucher", cap:null, enabled:true},
+    {name:"ICP 5,000/300",           base:5000,  reward:300,  type:"voucher", cap:15,   enabled:true},
+    {name:"實體聯名卡 15,000/1,500",  base:15000, reward:1500, type:"voucher", cap:5,    enabled:true},
+  ]},
 ];
-const DEFAULT_CURRENT_ID = "c10"; /* 全新安裝預設：周慶二波（10/19-10/26） */
+const DEFAULT_CURRENT_ID = "c11"; /* 全新安裝預設：愛Sharing一波（11/19-12/02） */
 const CFG_VER = 5;                /* v5：周年慶 10/1-10/18、舊檔期清除、門檻可啟用/停用 */
 const DEFAULT_PRODUCTS = [
   {name:"範例：DEEBOT X11 PRO 上下水版", special:30000},
@@ -291,13 +312,14 @@ if(_storedStores===null){
   stores.forEach(s=>{ if(!s.campaigns.find(c=>c.id===s.currentId)) s.currentId = s.campaigns[0].id; });
   activeStoreId = load(LS.activeStore, null);
   if(!activeStoreId || !stores.some(s=>s.id===activeStoreId)) activeStoreId = stores[0].id;
-  // 新增的預設檔期：每個既有門市補一次（已補過的 id 不再補，使用者刪除後不會復活；不切換目前選取的檔期）
+  // 新增的預設檔期：每個既有門市補一次（已補過的 id 不再補，使用者刪除後不會復活；若為目前預設檔期，首次補入時一併切換）
   const _seeded = load(LS.seeded, ["c9"]);
   const _newDefaults = DEFAULT_CAMPAIGNS.filter(d=>!_seeded.includes(d.id));
   if(_newDefaults.length){
     stores.forEach(s=>{
       _newDefaults.forEach(d=>{
         if(!s.campaigns.some(c=>c.id===d.id)) s.campaigns.push(normCampaigns([d])[0]);
+        if(d.id===DEFAULT_CURRENT_ID) s.currentId = d.id; /* 新預設檔期：首次補入時直接切換為目前檔期 */
       });
     });
   }
